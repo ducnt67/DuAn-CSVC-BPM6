@@ -1,17 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Menu, LogOut, Phone, Mail, MessageSquare, RotateCcw,
-  ChevronDown, UserCheck, LayoutDashboard
+  Menu, LogOut, RotateCcw,
+  ChevronDown, LayoutDashboard, PlusCircle
 } from 'lucide-react';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
-import { ROLE_LABELS } from '../hang-so/roles';
+import { ROLE_LABELS, ROLES } from '../hang-so/roles';
+import UniversityLogo from '../thanh-phan/UniversityLogo';
 import Breadcrumb from './Breadcrumb';
 import NotificationPanel from './NotificationPanel';
 import './Header.css';
 
 export default function Header({ onToggleSidebar }) {
-  const { currentUser, logout, resetDemoData } = useApp();
+  const { currentUser, logout, resetDemoData, addToast } = useApp();
   const navigate = useNavigate();
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -34,7 +35,15 @@ export default function Header({ onToggleSidebar }) {
 
   const handleLogout = () => {
     logout();
+    addToast('Đã đăng xuất khỏi hệ thống thành công.', 'info');
     navigate('/login');
+  };
+
+  const handleResetData = () => {
+    if (window.confirm('Bạn có chắc muốn khôi phục lại dữ liệu mẫu ban đầu? Các thay đổi lưu tạm sẽ được thiết lập lại.')) {
+      resetDemoData();
+      addToast('Đã khôi phục dữ liệu mẫu thành công!', 'success');
+    }
   };
 
   const initials = currentUser?.name
@@ -43,59 +52,48 @@ export default function Header({ onToggleSidebar }) {
       .map((n) => n[0])
       .slice(-2)
       .join('')
-    : 'ND';
+    : 'DUE';
+
+  const canCreate = currentUser && [ROLES.REQUESTER, ROLES.FACILITY_ADMIN, ROLES.STAFF].includes(currentUser.role);
 
   return (
     <>
-      {/* Top Utility Bar (Navy Blue matching DUE E-Study LMS screenshot) */}
+      {/* 1. Top Utility Bar */}
       <div className="app-topbar">
-        <div className="topbar-left">
-          <a href="tel:02363525656" className="topbar-contact-item">
-            <Phone size={13} />
-            <span>Điện thoại: 088.888.888</span>
-          </a>
-          <a href="mailto:ufm@due.edu.vn" className="topbar-contact-item">
-            <Mail size={13} />
-            <span>E-mail: ufm@due.edu.vn</span>
-          </a>
-        </div>
-
         <div className="topbar-right">
           {/* Notifications Panel */}
-          <div style={{ position: 'relative' }}>
-            <NotificationPanel />
-          </div>
+          <NotificationPanel />
 
-          {/* Messages */}
-          <button
-            type="button"
-            className="topbar-icon-btn"
-            title="Tin nhắn hệ thống"
-            aria-label="Tin nhắn"
-          >
-            <MessageSquare size={15} />
-          </button>
-
-          {/* User Avatar with Dropdown (Matching Screenshot 2) */}
+          {/* User Avatar with Dropdown */}
           <div className="topbar-user-menu-container" ref={userMenuRef}>
             <button
               type="button"
               className="topbar-user-trigger"
               onClick={() => setUserMenuOpen((prev) => !prev)}
               aria-expanded={userMenuOpen}
-              title="Thông tin tài khoản"
+              title={`Tài khoản: ${currentUser?.name}`}
             >
               <div className="topbar-user-avatar">
                 {currentUser?.initials || initials}
               </div>
+              <span className="topbar-user-meta">
+                <span className="topbar-user-displayname">{currentUser?.name || 'Khách'}</span>
+                <span className="topbar-user-role">
+                  {ROLE_LABELS[currentUser?.role] || 'Khách'}
+                </span>
+              </span>
               <ChevronDown size={13} className={`topbar-caret ${userMenuOpen ? 'open' : ''}`} />
             </button>
 
             {userMenuOpen && (
               <div className="user-dropdown-menu">
-                {/* User Info Header: Họ tên, Phòng ban / Lớp học, Vai trò */}
+                {/* User Info Header: Họ tên, Phòng ban, Vai trò */}
                 <div className="user-dropdown-header">
+                  <div className="user-dropdown-avatar-large">
+                    {currentUser?.initials || initials}
+                  </div>
                   <div className="user-dropdown-name">{currentUser?.name}</div>
+                  <div className="user-dropdown-username">@{currentUser?.username}</div>
                   <div className="user-dropdown-dept">{currentUser?.department}</div>
                   <div className="user-dropdown-role">
                     {ROLE_LABELS[currentUser?.role] || currentUser?.role}
@@ -113,8 +111,8 @@ export default function Header({ onToggleSidebar }) {
                     navigate('/dashboard');
                   }}
                 >
-                  <LayoutDashboard size={15} color="#0054a6" />
-                  <span>Bảng điều khiển</span>
+                  <LayoutDashboard size={15} color="var(--color-due-blue)" />
+                  <span>Bảng điều khiển tổng quan</span>
                 </button>
 
                 <div className="user-dropdown-divider" />
@@ -129,7 +127,7 @@ export default function Header({ onToggleSidebar }) {
                   }}
                 >
                   <LogOut size={15} />
-                  <span>Đăng xuất</span>
+                  <span>Đăng xuất tài khoản</span>
                 </button>
               </div>
             )}
@@ -137,9 +135,10 @@ export default function Header({ onToggleSidebar }) {
         </div>
       </div>
 
-      {/* Main Header (Clean & Minimal) */}
+      {/* 2. Main University Header (Matching Image 1: White header, University logo & title) */}
       <header className="app-header">
         <div className="header-left">
+          {/* Toggle Sidebar Button */}
           <button
             type="button"
             className="sidebar-toggle-btn"
@@ -149,30 +148,50 @@ export default function Header({ onToggleSidebar }) {
           >
             <Menu size={18} />
           </button>
-          <Breadcrumb />
+
+          {/* University Logo & Title (Matching Image 1) */}
+          <Link to="/dashboard" className="header-brand-link" title="Trường Đại học Kinh tế - ĐH Đà Nẵng">
+            <UniversityLogo variant="default" size="sm" showSubtitle={true} />
+          </Link>
+
+          {/* Breadcrumb Context */}
+          <div className="header-breadcrumb-wrapper">
+            <Breadcrumb />
+          </div>
         </div>
 
         <div className="header-right">
-          <Link to="/dashboard" className="header-nav-link">
-            Trang chủ
-          </Link>
-          <Link to="/requests" className="header-nav-link">
-            Quản lý CSVC
-          </Link>
+          {/* Primary Action Button: Báo cáo sự cố mới in Orange (#F58220) */}
+          {canCreate && (
+            <Link to="/requests/create" className="btn-header-create" title="Tạo yêu cầu báo hỏng cơ sở vật chất">
+              <PlusCircle size={15} />
+              <span>Báo hỏng CSVC</span>
+            </Link>
+          )}
 
           {/* Reset Demo Data Button */}
           <button
             type="button"
             className="btn-reset-demo"
-            onClick={resetDemoData}
-            title="Khôi phục lại dữ liệu mẫu"
+            onClick={handleResetData}
+            title="Khôi phục lại dữ liệu mẫu mặc định"
           >
             <RotateCcw size={13} />
             <span>Khôi phục dữ liệu mẫu</span>
+          </button>
+
+          {/* Standalone Quick Logout Button */}
+          <button
+            type="button"
+            className="btn-header-logout"
+            onClick={handleLogout}
+            title="Đăng xuất để đổi vai trò"
+          >
+            <LogOut size={14} />
+            <span>Đăng xuất</span>
           </button>
         </div>
       </header>
     </>
   );
 }
-

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import './Breadcrumb.css';
 
 const ROUTE_LABELS = {
   dashboard: 'Bảng điều khiển',
@@ -15,22 +16,22 @@ const ROUTE_LABELS = {
   reports: 'Báo cáo & Thống kê',
 };
 
-export default function Breadcrumb() {
+export default function Breadcrumb({ isLight = false }) {
   const location = useLocation();
   const pathnames = location.pathname.split('/').filter((x) => x);
 
   if (pathnames.length === 0 || pathnames[0] === 'dashboard') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+      <div className={`due-breadcrumb ${isLight ? 'breadcrumb-dark-text' : 'breadcrumb-light-text'}`}>
         <Home size={15} />
-        <span>Bảng điều khiển</span>
+        <span className="breadcrumb-current-text">Bảng điều khiển</span>
       </div>
     );
   }
 
   return (
-    <nav style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-      <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', color: 'inherit' }}>
+    <nav className={`due-breadcrumb ${isLight ? 'breadcrumb-dark-text' : 'breadcrumb-light-text'}`}>
+      <Link to="/dashboard" className="breadcrumb-home-link" title="Về trang chủ">
         <Home size={15} />
       </Link>
       {pathnames.map((name, index) => {
@@ -39,12 +40,12 @@ export default function Breadcrumb() {
         const label = ROUTE_LABELS[name] || name;
 
         return (
-          <span key={name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <ChevronRight size={14} style={{ opacity: 0.5 }} />
+          <span key={name} className="breadcrumb-segment">
+            <ChevronRight size={13} className="breadcrumb-chevron" />
             {isLast ? (
-              <span style={{ color: 'var(--color-text)', fontWeight: 600 }}>{label}</span>
+              <span className="breadcrumb-current-text">{label}</span>
             ) : (
-              <Link to={routeTo} style={{ color: 'inherit' }}>
+              <Link to={routeTo} className="breadcrumb-parent-link">
                 {label}
               </Link>
             )}
@@ -54,4 +55,3 @@ export default function Breadcrumb() {
     </nav>
   );
 }
-

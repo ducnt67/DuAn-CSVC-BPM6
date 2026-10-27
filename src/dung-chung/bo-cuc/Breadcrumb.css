@@ -1,0 +1,63 @@
+/* Breadcrumb Styles */
+.due-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.breadcrumb-home-link {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast);
+}
+
+.breadcrumb-home-link:hover {
+  opacity: 1;
+}
+
+.breadcrumb-segment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumb-chevron {
+  opacity: 0.5;
+}
+
+.breadcrumb-parent-link {
+  color: inherit;
+  opacity: 0.85;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.breadcrumb-parent-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Breadcrumb on the light main header */
+.due-breadcrumb.breadcrumb-light-text {
+  color: var(--color-due-blue-dark);
+}
+
+.due-breadcrumb.breadcrumb-light-text .breadcrumb-current-text {
+  color: var(--color-due-blue-dark);
+  font-weight: 700;
+}
+
+/* On Light Navbar */
+.due-breadcrumb.breadcrumb-dark-text {
+  color: var(--color-text-secondary);
+}
+
+.due-breadcrumb.breadcrumb-dark-text .breadcrumb-current-text {
+  color: var(--color-text);
+  font-weight: 700;
+}

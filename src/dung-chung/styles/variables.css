@@ -1,36 +1,38 @@
 :root {
   /* Brand colors (DUE University Identity) */
-  --color-due-blue: #0054a6;
-  --color-due-blue-dark: #003e7e;
-  --color-due-blue-hover: #00458a;
-  --color-due-topbar: #004884;
-  --color-due-blue-light: #e8f1fa;
-  --color-due-blue-soft: #f0f6fc;
+  --color-due-blue: #1677C8;
+  --color-due-blue-dark: #0d5391;
+  --color-due-blue-hover: #1263a8;
+  --color-due-topbar: #0f5a9e;
+  --color-due-blue-light: #e8f3fc;
+  --color-due-blue-soft: #f2f8fd;
 
-  --color-primary: #f58220;
+  /* Primary Action Orange (Matching User Specifications: #F58220) */
+  --color-primary: #F58220;
   --color-primary-hover: #e06d10;
   --color-primary-light: #fff2e5;
 
-  --color-blue: #0054a6;
-  --color-blue-hover: #00458a;
-  --color-blue-light: #e8f1fa;
+  /* Accent Blue (Matching User Specifications: #1677C8) */
+  --color-blue: #1677C8;
+  --color-blue-hover: #1062a8;
+  --color-blue-light: #e8f3fc;
 
-  --color-green: #229a58;
-  --color-green-hover: #187b45;
-  --color-green-light: #e9f8ef;
+  /* Success Green (Matching User Specifications: #229A58) */
+  --color-green: #229A58;
+  --color-green-hover: #1a7b45;
+  --color-green-light: #e9f7ee;
 
+  /* White & Neutrals (Matching User Specifications: #FFFFFF) */
   --color-white: #ffffff;
-
-  /* Neutral colors */
-  --color-background: #f4f6f9;
+  --color-background: #f4f6fa;
   --color-surface: #ffffff;
-  --color-surface-muted: #f4f6f9;
-  --color-surface-hover: #edf2f7;
+  --color-surface-muted: #f4f6fa;
+  --color-surface-hover: #edf2f8;
   --color-text: #1e293b;
-  --color-text-secondary: #5a6a80;
-  --color-text-tertiary: #8896ab;
-  --color-border: #dde3eb;
-  --color-border-light: #ebf0f5;
+  --color-text-secondary: #52637a;
+  --color-text-tertiary: #8494a8;
+  --color-border: #dbe2ea;
+  --color-border-light: #edf2f7;
 
   /* Feedback colors */
   --color-danger: #d64545;
@@ -41,12 +43,12 @@
 
   /* Layout */
   --sidebar-width: 260px;
-  --sidebar-collapsed-width: 68px;
+  --sidebar-collapsed-width: 72px;
   --topbar-height: 38px;
-  --header-height: 60px;
+  --header-height: 70px;
 
   /* Typography matching DUE E-Study */
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.8125rem;
   --font-size-base: 0.875rem;
@@ -70,7 +72,7 @@
   --radius-lg: 10px;
   --radius-xl: 14px;
 
-  /* Shadow */
+  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
   --shadow-card: 0 1px 4px rgba(15, 23, 42, 0.07);
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
