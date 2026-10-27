@@ -1,0 +1,307 @@
+/* Top Utility Bar (Navy Blue matching DUE E-Study screenshot) */
+.app-topbar {
+  background-color: var(--color-due-topbar);
+  color: #ffffff;
+  font-size: 0.75rem;
+  padding: 0 24px;
+  height: var(--topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 920;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.topbar-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e2e8f0;
+  text-decoration: none;
+}
+
+.topbar-contact-item:hover {
+  color: #ffffff;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.topbar-icon-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+  transition: opacity var(--transition-fast);
+}
+
+.topbar-icon-btn:hover {
+  opacity: 1;
+}
+
+.topbar-badge {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  background-color: var(--color-danger);
+  color: #ffffff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border: 1px solid var(--color-due-topbar);
+}
+
+/* User Avatar Dropdown Trigger on Topbar (Matching DUE E-Study avatar) */
+.topbar-user-menu-container {
+  position: relative;
+}
+
+.topbar-user-trigger {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 20px;
+  color: #ffffff;
+  transition: background-color var(--transition-fast);
+}
+
+.topbar-user-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.topbar-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  color: var(--color-due-topbar);
+  font-weight: 800;
+  font-size: 0.6875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.topbar-caret {
+  color: #ffffff;
+  transition: transform var(--transition-fast);
+  opacity: 0.9;
+}
+
+.topbar-caret.open {
+  transform: rotate(180deg);
+}
+
+/* User Dropdown Menu (Styled exactly like Moodle / E-Study popover) */
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background-color: #ffffff;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--color-border);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-dropdown-header {
+  padding: 14px 16px;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.user-dropdown-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.user-dropdown-dept {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+.user-dropdown-role {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-due-blue);
+  background-color: var(--color-due-blue-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.user-dropdown-divider {
+  height: 1px;
+  background-color: var(--color-border-light);
+}
+
+.user-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: #334155;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.user-dropdown-item:hover {
+  background-color: #f1f5f9;
+  color: var(--color-due-blue);
+}
+
+.user-dropdown-logout {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.user-dropdown-logout:hover {
+  background-color: #fef2f2;
+  color: var(--color-danger);
+}
+
+/* Main Header Bar */
+.app-header {
+  height: var(--header-height);
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: var(--topbar-height);
+  z-index: 910;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sidebar-toggle-btn {
+  background-color: var(--color-due-blue);
+  color: var(--color-white);
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: var(--color-due-blue-hover);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-nav-link {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.header-nav-link:hover {
+  color: var(--color-due-blue);
+  background-color: var(--color-due-blue-light);
+}
+
+/* Reset Demo Data Button */
+.btn-reset-demo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: #f8fafc;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-reset-demo:hover {
+  background-color: #f1f5f9;
+  color: var(--color-text);
+  border-color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+  .topbar-contact-item {
+    display: none;
+  }
+  .header-nav-link {
+    display: none;
+  }
+}
