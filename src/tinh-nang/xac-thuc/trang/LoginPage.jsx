@@ -7,6 +7,8 @@ import {
   ShieldCheck, Phone, Mail, CheckCircle, ArrowRight, Info
 } from 'lucide-react';
 import Button from '../../../dung-chung/thanh-phan/Button';
+import UniversityLogo from '../../../dung-chung/thanh-phan/UniversityLogo';
+import Footer from '../../../dung-chung/bo-cuc/Footer';
 
 export default function LoginPage() {
   const { users, login, addToast } = useApp();
@@ -91,6 +93,24 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Official Header Banner matching Image 1 */}
+      <header
+        style={{
+          backgroundColor: '#ffffff',
+          padding: '12px 24px',
+          borderBottom: '1px solid var(--color-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        }}
+      >
+        <UniversityLogo variant="default" size="sm" showSubtitle={true} />
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-due-blue)', fontWeight: 700, letterSpacing: '0.04em' }}>
+          CỔNG ĐĂNG NHẬP QUY TRÌNH CSVC (BPM)
+        </div>
+      </header>
+
       {/* Main Container */}
       <div
         style={{
@@ -127,33 +147,9 @@ export default function LoginPage() {
             }}
           >
             <div>
-              {/* Emblem */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '8px 16px',
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                  backdropFilter: 'blur(6px)',
-                  marginBottom: 32,
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <img
-                  src="/logo_app.svg"
-                  alt="Logo DUE Facility Management"
-                  style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 4, backgroundColor: '#ffffff' }}
-                />
-                <div>
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, opacity: 0.85 }}>
-                    ĐẠI HỌC ĐÀ NẴNG
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, letterSpacing: '0.02em' }}>
-                    TRƯỜNG ĐẠI HỌC KINH TẾ
-                  </div>
-                </div>
+              {/* Emblem with UniversityLogo */}
+              <div style={{ marginBottom: 28 }}>
+                <UniversityLogo variant="white" size="md" />
               </div>
 
               <h1
@@ -530,6 +526,9 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Official Footer matching Image 2 */}
+      <Footer />
     </div>
   );
 }

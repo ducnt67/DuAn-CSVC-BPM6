@@ -1,0 +1,127 @@
+/* DUE University Official Logo Styles with Real Image Crest */
+.due-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  user-select: none;
+}
+
+.due-shield-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.due-shield-img {
+  display: block;
+  object-fit: contain;
+  transition: transform var(--transition-fast);
+}
+
+.due-brand-logo:hover .due-shield-img {
+  transform: scale(1.03);
+}
+
+.due-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+}
+
+.due-univ-parent {
+  font-family: var(--font-family);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.due-univ-name {
+  font-family: var(--font-family);
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.due-system-subtitle {
+  font-family: var(--font-family);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+/* Color Variant: Default */
+.due-brand-logo.variant-default .due-univ-parent {
+  color: #1677C8;
+}
+
+.due-brand-logo.variant-default .due-univ-name {
+  color: #0f5a9e;
+}
+
+.due-brand-logo.variant-default .due-system-subtitle {
+  color: #F58220;
+}
+
+/* Color Variant: White for Dark Backgrounds (Footer) */
+.due-brand-logo.variant-white .due-univ-parent {
+  color: #ffffff;
+}
+
+.due-brand-logo.variant-white .due-univ-name {
+  color: #ffffff;
+}
+
+.due-brand-logo.variant-white .due-system-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Size Variants */
+.due-brand-logo.size-sm .due-shield-img {
+  width: 36px;
+  height: 42px;
+}
+.due-brand-logo.size-sm .due-univ-parent {
+  font-size: 0.6875rem;
+}
+.due-brand-logo.size-sm .due-univ-name {
+  font-size: 0.875rem;
+}
+.due-brand-logo.size-sm .due-system-subtitle {
+  font-size: 0.625rem;
+}
+
+.due-brand-logo.size-md .due-shield-img {
+  width: 48px;
+  height: 56px;
+}
+.due-brand-logo.size-md .due-univ-parent {
+  font-size: 0.8125rem;
+}
+.due-brand-logo.size-md .due-univ-name {
+  font-size: 1.125rem;
+}
+.due-brand-logo.size-md .due-system-subtitle {
+  font-size: 0.6875rem;
+}
+
+.due-brand-logo.size-lg .due-shield-img {
+  width: 60px;
+  height: 70px;
+}
+.due-brand-logo.size-lg .due-univ-parent {
+  font-size: 0.9375rem;
+}
+.due-brand-logo.size-lg .due-univ-name {
+  font-size: 1.3125rem;
+}
+.due-brand-logo.size-lg .due-system-subtitle {
+  font-size: 0.75rem;
+}

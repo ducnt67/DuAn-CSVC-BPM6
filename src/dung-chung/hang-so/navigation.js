@@ -1,6 +1,6 @@
 import {
-  LayoutDashboard, FileText, ClipboardList, Wrench, ClipboardCheck,
-  Building2, BarChart3, Settings, PlusCircle, List, ShieldCheck,
+  LayoutDashboard, FileText, ClipboardList, Wrench,
+  Building2, BarChart3, PlusCircle, List, ShieldCheck,
   Truck, CheckSquare
 } from 'lucide-react';
 import { ROLES } from './roles';
@@ -8,10 +8,11 @@ import { ROLES } from './roles';
 export const NAVIGATION = [
   {
     group: 'Tổng quan',
+    hideHeader: true,
     items: [
       {
         key: 'dashboard',
-        label: 'Bảng điều khiển',
+        label: 'Tổng quan',
         path: '/dashboard',
         icon: LayoutDashboard,
         roles: [ROLES.REQUESTER, ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.DIRECTOR, ROLES.PROCUREMENT],
@@ -19,7 +20,7 @@ export const NAVIGATION = [
     ],
   },
   {
-    group: 'Yêu cầu sửa chữa',
+    group: 'Quản lý yêu cầu',
     items: [
       {
         key: 'my-requests',
@@ -45,7 +46,7 @@ export const NAVIGATION = [
     ],
   },
   {
-    group: 'Xử lý sửa chữa',
+    group: 'Quy trình sửa chữa',
     items: [
       {
         key: 'repair-work',
@@ -54,11 +55,6 @@ export const NAVIGATION = [
         icon: Wrench,
         roles: [ROLES.STAFF],
       },
-    ],
-  },
-  {
-    group: 'Phương án & Phê duyệt',
-    items: [
       {
         key: 'repair-plans',
         label: 'Phương án sửa chữa',
@@ -73,11 +69,6 @@ export const NAVIGATION = [
         icon: ShieldCheck,
         roles: [ROLES.DIRECTOR],
       },
-    ],
-  },
-  {
-    group: 'Mua sắm & Thi công',
-    items: [
       {
         key: 'external-work',
         label: 'Công việc thuê ngoài',
@@ -85,11 +76,6 @@ export const NAVIGATION = [
         icon: Truck,
         roles: [ROLES.PROCUREMENT],
       },
-    ],
-  },
-  {
-    group: 'Nghiệm thu',
-    items: [
       {
         key: 'acceptance',
         label: 'Nghiệm thu',
@@ -100,7 +86,7 @@ export const NAVIGATION = [
     ],
   },
   {
-    group: 'Danh mục',
+    group: 'Dữ liệu & báo cáo',
     items: [
       {
         key: 'facilities',
@@ -109,11 +95,6 @@ export const NAVIGATION = [
         icon: Building2,
         roles: [ROLES.FACILITY_ADMIN, ROLES.REQUESTER, ROLES.STAFF, ROLES.PROCUREMENT],
       },
-    ],
-  },
-  {
-    group: 'Báo cáo',
-    items: [
       {
         key: 'reports',
         label: 'Báo cáo & Thống kê',

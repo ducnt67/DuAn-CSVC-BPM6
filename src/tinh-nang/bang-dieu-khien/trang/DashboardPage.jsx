@@ -10,6 +10,7 @@ import DashboardStats from '../thanh-phan/DashboardStats';
 import StatusBadge from '../../../dung-chung/thanh-phan/StatusBadge';
 import PriorityBadge from '../../../dung-chung/thanh-phan/PriorityBadge';
 import Button from '../../../dung-chung/thanh-phan/Button';
+import PortalShortcuts from '../../../dung-chung/thanh-phan/PortalShortcuts';
 import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -286,6 +287,9 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
+
+      {/* Quick Navigation Cards matching Image 2 */}
+      <PortalShortcuts />
     </div>
   );
 }

@@ -1,19 +1,19 @@
 # HỆ THỐNG QUẢN LÝ SỬA CHỮA CƠ SỞ VẬT CHẤT – DUE FACILITY MANAGEMENT
 
-Ứng dụng quản lý quy trình sửa chữa cơ sở vật chất (Facility Management & Business Process Management) dành cho **Trường Đại học Kinh tế – Đại học Đà Nẵng (DUE)**.
+Ứng dụng frontend mô phỏng quản lý quy trình sửa chữa cơ sở vật chất (Facility Management & Business Process Management) dành cho **Trường Đại học Kinh tế – Đại học Đà Nẵng (DUE)**.
 
-Hệ thống mô phỏng đầy đủ quy trình nghiệp vụ thực tế từ khâu tiếp nhận yêu cầu, khảo sát, lập phương án dự toán, Ban Giám hiệu phê duyệt, phân công sửa chữa nội bộ hoặc thuê ngoài, nghiệm thu chất lượng theo biên bản thực tế và xác nhận hoàn thành.
+Ứng dụng mô phỏng quy trình từ tiếp nhận yêu cầu, khảo sát, lập phương án và dự toán, phê duyệt khi cần, đến sửa chữa nội bộ hoặc thuê ngoài, nghiệm thu và xác nhận hoàn thành. Dữ liệu và xác thực hiện chạy ở phía trình duyệt, chưa kết nối backend.
 
 ---
 
 ## 1. Công nghệ sử dụng
 
 - **Frontend Core**: React 18 (JavaScript ES6+), Vite 6.
-- **Routing**: React Router DOM v6 với Layout phân cấp và bảo vệ phiên demo.
+- **Routing**: React Router DOM v6 với Layout phân cấp; các trang nghiệp vụ yêu cầu có phiên đăng nhập demo.
 - **Biểu đồ thống kê**: Recharts (PieChart, BarChart trực quan).
 - **Icons**: Lucide React.
 - **Xử lý ngày tháng & tiền tệ**: `date-fns` (Vietnamese Locale), `Intl.NumberFormat` (VND).
-- **Lưu trữ dữ liệu**: `localStorage` đồng bộ 2 chiều (khởi tạo dữ liệu mẫu phong phú và tự động lưu thay đổi giữa các lần tải lại trang).
+- **Lưu trữ dữ liệu**: `localStorage` trên trình duyệt; dữ liệu mẫu được nạp lần đầu và thay đổi được lưu để còn sau khi tải lại cùng trình duyệt.
 - **Giao diện**: CSS thuần (CSS Custom Properties) tuân thủ bảng màu nhận diện DUE E-Study:
   - Màu cam (`#F58220`): Nút hành động chính, điểm nhấn tương tác.
   - Màu xanh dương (`#1677C8`): Sidebar, liên kết, trạng thái tiến trình.
@@ -24,36 +24,36 @@ Hệ thống mô phỏng đầy đủ quy trình nghiệp vụ thực tế từ 
 
 ## 2. 5 Actor nghiệp vụ và Tài khoản Demo
 
-Hệ thống hoạt động theo cơ chế xác thực tài khoản thực tế. Tại màn hình Đăng nhập (`/login`), người dùng có thể nhập Tên đăng nhập và Mật khẩu tương ứng với 5 vai trò nghiệp vụ (hoặc sử dụng các nút thao tác nhanh tiện lợi):
+Đây là đăng nhập mô phỏng phía frontend, không phải hệ thống xác thực bảo mật production. Tại màn hình Đăng nhập (`/login`), có thể nhập thông tin một trong 5 tài khoản demo hoặc chọn tài khoản demo để điền/đăng nhập nhanh:
 
 | Mã Actor | Vai trò | Họ và tên Demo | Tên đăng nhập | Mật khẩu | Quyền hạn chính |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **A01** | **Người yêu cầu** | Nguyễn Minh Anh | `nmanh` | `123` | Tạo yêu cầu, bổ sung thông tin, xác nhận kết quả sửa chữa nội bộ. |
-| **A02** | **Quản trị CSVC** | Trần Quốc Huy | `tqhuy` | `123` | Tiếp nhận yêu cầu, kiểm tra, phân công cán bộ kỹ thuật, quản lý danh mục CSVC. |
-| **A03** | **Cán bộ phụ trách** | Lê Hoàng Nam | `lhnam` | `123` | Khảo sát hiện trạng, lập phương án, sửa chữa nội bộ, nghiệm thu thực tế thuê ngoài. |
-| **A04** | **Ban Giám hiệu** | Nguyễn Thị Thu Hà | `nttha` | `123` | Phê duyệt phương án & dự toán, từ chối phương án (nhập lý do bắt buộc). |
-| **A05** | **BP Đầu tư & Mua sắm** | Phạm Văn Bình | `pvbinh` | `123` | Quản lý hồ sơ thuê ngoài, chọn nhà thầu, cập nhật tiến độ, báo thi công xong. |
+| **A01** | **Người yêu cầu** | Nguyễn Minh Anh | `nmanh` | `123` | Tạo/theo dõi yêu cầu, bổ sung thông tin được yêu cầu và xác nhận kết quả sửa chữa nội bộ. |
+| **A02** | **Quản trị CSVC** | Trần Quốc Huy | `tqhuy` | `123` | Tiếp nhận yêu cầu, yêu cầu bổ sung, phân công cán bộ kỹ thuật và quản lý danh mục CSVC. |
+| **A03** | **Cán bộ phụ trách** | Lê Hoàng Nam | `lhnam` | `123` | Khảo sát, lập phương án, cập nhật sửa chữa nội bộ và nghiệm thu công việc thuê ngoài được giao. |
+| **A04** | **Ban Giám hiệu** | Nguyễn Thị Thu Hà | `nttha` | `123` | Xem xét, phê duyệt hoặc từ chối phương án; lý do từ chối là bắt buộc. |
+| **A05** | **BP Đầu tư & Mua sắm** | Phạm Văn Bình | `pvbinh` | `123` | Quản lý công việc thuê ngoài, thông tin đơn vị thi công và tiến độ. |
 
-> **Quy tắc vận hành chuẩn thực tế**: Trong khi đang sử dụng hệ thống, không có dropdown chuyển đổi vai trò tùy ý. Để chuyển vai trò, người dùng bấm **"Đăng xuất"** trên Header và đăng nhập vào tài khoản của vai trò khác — đúng chuẩn phần mềm doanh nghiệp thực tế.
-> Tuyệt đối không tạo tài khoản Nhà thầu bên ngoài theo đúng yêu cầu nghiệp vụ. Thông tin nhà thầu được lưu trong hồ sơ thuê ngoài do BP Đầu tư & Mua sắm quản lý.
+> **Lưu ý demo**: Mật khẩu mẫu được khai báo trực tiếp trong mã nguồn và không dùng cho môi trường production. Đăng xuất rồi đăng nhập tài khoản khác để đổi vai trò; tại trang đăng nhập cũng có thao tác nhanh cho các tài khoản demo. Vai trò chủ yếu dùng để lọc menu và điều khiển thao tác trên giao diện, không thay thế phân quyền phía máy chủ.
+> Không có tài khoản đăng nhập riêng cho nhà thầu. Thông tin đơn vị thi công được quản lý trong hồ sơ công việc thuê ngoài bởi BP Đầu tư & Mua sắm.
 
 ---
 
 ## 3. Danh sách các Module chức năng (M01 – M07)
 
-1. **M01 – Quản lý danh mục CSVC** (`/facilities`): Xem danh mục phòng học, thiết bị máy chiếu, máy lạnh, lọc theo tòa nhà (Khu C, B, H, E...), thêm/sửa CSVC, xem lịch sử sửa chữa của từng thiết bị.
+1. **M01 – Quản lý danh mục CSVC** (`/facilities`): Tìm kiếm và lọc danh mục theo loại, tòa nhà; Quản trị CSVC có thể thêm/sửa danh mục; xem các yêu cầu sửa chữa liên quan đến từng hạng mục.
 2. **M02 – Quản lý yêu cầu sửa chữa**:
    - `/requests`: Bảng tổng hợp tất cả yêu cầu, tìm kiếm, lọc theo trạng thái, mức độ ưu tiên, hình thức sửa chữa.
    - `/my-requests`: Dành riêng cho Người yêu cầu theo dõi sự cố do mình báo cáo.
-   - `/requests/create`: Biểu mẫu tạo yêu cầu kèm chọn cơ sở vật chất, mô tả chi tiết và tải ảnh hiện trạng.
+   - `/requests/create`: Biểu mẫu tạo yêu cầu, chọn cơ sở vật chất, mô tả chi tiết và đính kèm tệp. Bản demo hiện chỉ lưu tên tệp, chưa tải/lưu nội dung tệp.
    - `/requests/:id`: Trang chi tiết trung tâm với **Visual Timeline BPM**, phân tab thông tin, và các hộp thoại thao tác động theo vai trò.
-3. **M03 – Quản lý xử lý sửa chữa** (`/repair-work`): Không gian làm việc riêng của Cán bộ kỹ thuật theo các giai đoạn: Cần khảo sát, Cần lập phương án, Đang xử lý nội bộ, Cần nghiệm thu.
+3. **M03 – Quản lý xử lý sửa chữa** (`/repair-work`): Danh sách công việc được giao cho Cán bộ phụ trách, có thể lọc theo các giai đoạn khảo sát, lập phương án, sửa chữa nội bộ và nghiệm thu/khắc phục.
 4. **M04 – Quản lý phương án & Phê duyệt**:
-   - `/repair-plans`: Danh sách các phương án kỹ thuật và dự toán kinh phí.
-   - `/approvals`: Hộp thư phê duyệt dành cho Ban Giám hiệu (Duyệt ngay hoặc Từ chối kèm lý do).
-5. **M05 – Quản lý mua sắm và thi công xây dựng** (`/external-work`): BP Đầu tư & Mua sắm quản lý thông tin nhà thầu, tỷ lệ hoàn thành (0 - 100%), báo thi công xong chuyển sang Chờ nghiệm thu.
-6. **M06 – Quản lý nghiệm thu và xác nhận kết quả** (`/acceptance`): Cán bộ kỹ thuật kiểm tra hiện trường, lập biên bản ghi nhận ĐẠT / KHÔNG ĐẠT. Nếu Không đạt phải nhập nội dung khắc phục. Chỉ khi nghiệm thu ĐẠT mới mở khóa nút "Xác nhận hoàn thành". Lưu giữ toàn bộ lịch sử các lần kiểm tra.
-7. **M07 – Báo cáo và thống kê** (`/reports`): Báo cáo chỉ số KPI, biểu đồ phân bổ trạng thái, so sánh kinh phí theo tòa nhà, và nút **Xuất CSV thực tế** (hỗ trợ hiển thị tiếng Việt trên Excel nhờ UTF-8 BOM).
+   - `/repair-plans`: Danh sách phương án kỹ thuật, hình thức sửa chữa, dự toán và trạng thái phê duyệt.
+   - `/approvals`: Danh sách phương án theo trạng thái chờ duyệt, đã duyệt hoặc bị từ chối; Ban Giám hiệu có thể phê duyệt hoặc từ chối phương án đang chờ, với lý do từ chối bắt buộc.
+5. **M05 – Quản lý công việc thuê ngoài** (`/external-work`): BP Đầu tư & Mua sắm cập nhật đơn vị thi công, thông tin liên hệ và tiến độ (0–100%); thao tác báo hoàn thành chuyển yêu cầu sang Chờ nghiệm thu.
+6. **M06 – Quản lý nghiệm thu thuê ngoài** (`/acceptance`): Cán bộ phụ trách kiểm tra hiện trường, ghi nhận ĐẠT/KHÔNG ĐẠT; nếu không đạt phải nhập nội dung khắc phục. Có thể xem lịch sử các lần nghiệm thu. Sau khi đạt, cán bộ thực hiện thêm bước xác nhận hoàn thành.
+7. **M07 – Báo cáo và thống kê** (`/reports`): Tổng hợp số lượng yêu cầu, hoàn thành, đang xử lý, cần khắc phục và kinh phí dự toán; biểu đồ trạng thái, hình thức sửa chữa, kinh phí theo tòa nhà; lọc theo tòa nhà/hình thức và xuất CSV có UTF-8 BOM để hỗ trợ Excel.
 
 ---
 
@@ -62,23 +62,23 @@ Hệ thống hoạt động theo cơ chế xác thực tài khoản thực tế.
 ### Luồng 1: Sửa chữa nội bộ thành công
 1. **Người yêu cầu** tạo yêu cầu sự cố (`NEW`).
 2. **Quản trị CSVC** tiếp nhận (`ACCEPTED`) và phân công **Cán bộ phụ trách** (`SURVEYING`).
-3. **Cán bộ phụ trách** khảo sát hiện trường, lập phương án hình thức "Sửa chữa nội bộ" (`INTERNAL_REPAIR`).
+3. **Cán bộ phụ trách** khảo sát hiện trường và lập phương án sửa chữa nội bộ. Phương án nội bộ mặc định được duyệt tự động; nếu đánh dấu cần phê duyệt thì chuyển qua Ban Giám hiệu trước khi sửa chữa (`INTERNAL_REPAIR`).
 4. **Cán bộ phụ trách** sửa chữa xong và cập nhật kết quả -> Chuyển sang `WAITING_FOR_CONFIRMATION`.
-5. **Người yêu cầu** kiểm tra thực tế, bấm **Xác nhận kết quả** -> Chuyển sang `COMPLETED`.
+5. **Người yêu cầu** kiểm tra kết quả và bấm **Xác nhận kết quả** -> Chuyển sang `COMPLETED`.
 
 ### Luồng 2: Sửa chữa thuê ngoài thành công
 1. Khảo sát xong, **Cán bộ phụ trách** lập phương án "Thuê ngoài" kèm dự toán kinh phí -> Gửi Ban Giám hiệu (`WAITING_FOR_APPROVAL`).
 2. **Ban Giám hiệu** phê duyệt phương án -> Chuyển sang `WAITING_FOR_EXTERNAL_WORK`.
 3. **BP Đầu tư & Mua sắm** tiếp nhận, giao đơn vị thi công, cập nhật tiến độ -> `EXTERNAL_WORK_IN_PROGRESS`.
 4. Đơn vị thi công xong, BP Đầu tư báo hoàn thành -> Chuyển sang `WAITING_FOR_ACCEPTANCE`.
-5. **Cán bộ phụ trách** kiểm tra thực tế, lập biên bản **Nghiệm thu ĐẠT**.
-6. **Cán bộ phụ trách** bấm **Xác nhận hoàn thành thuê ngoài** -> Chuyển sang `COMPLETED`.
+5. **Cán bộ phụ trách** kiểm tra thực tế, lưu biên bản **Nghiệm thu ĐẠT**. Yêu cầu vẫn ở trạng thái `WAITING_FOR_ACCEPTANCE` cho đến bước xác nhận.
+6. **Cán bộ phụ trách** bấm **Xác nhận hoàn thành** sau khi nghiệm thu đạt -> Chuyển sang `COMPLETED`.
 
 ### Luồng 3: Sửa chữa thuê ngoài Nghiệm thu KHÔNG ĐẠT
-1. **Cán bộ phụ trách** kiểm tra thực tế thấy sự cố chưa được xử lý triệt để -> Lập biên bản **Nghiệm thu KHÔNG ĐẠT**, nhập yêu cầu khắc phục bắt buộc -> Chuyển sang `NEEDS_REMEDIATION`.
-2. Hệ thống tự động vô hiệu hóa nút "Xác nhận hoàn thành".
-3. **BP Đầu tư & Mua sắm** yêu cầu nhà thầu khắc phục và cập nhật lại tiến độ.
-4. **Cán bộ phụ trách** tổ chức nghiệm thu lại (Lần 2). Khi nghiệm thu ĐẠT mới được ký xác nhận hoàn thành.
+1. **Cán bộ phụ trách** kiểm tra thực tế thấy sự cố chưa được xử lý triệt để -> Lập biên bản **Nghiệm thu KHÔNG ĐẠT**, nhập yêu cầu khắc phục bắt buộc.
+2. Yêu cầu chuyển sang `NEEDS_REMEDIATION`; chưa thể xác nhận hoàn thành khi kết quả nghiệm thu chưa đạt.
+3. **BP Đầu tư & Mua sắm** cập nhật hồ sơ thuê ngoài/tiến độ sau khi yêu cầu khắc phục.
+4. **Cán bộ phụ trách** tổ chức nghiệm thu lại. Khi nghiệm thu ĐẠT mới được xác nhận hoàn thành.
 
 ### Luồng 4: Phương án bị Ban Giám hiệu từ chối
 1. **Ban Giám hiệu** xem xét dự toán, bấm **Từ chối** và nhập lý do bắt buộc (VD: "Dự toán quá cao, cần tận dụng linh kiện cũ").
@@ -112,7 +112,7 @@ src/
 
 Mỗi module trong `tinh-nang/` được tổ chức theo màn hình (`trang/`). Các component dùng chung không thuộc riêng nghiệp vụ nào được đặt trong `dung-chung/`. Dữ liệu demo được tách khỏi mã nguồn nghiệp vụ để sau này có thể thay bằng API mà không phải thay đổi cấu trúc giao diện.
 
-Logic cập nhật dữ liệu được tách thành các service trong từng module nghiệp vụ. `AppContext` hiện đóng vai trò điều phối state và giữ nguyên API `useApp()` để các màn hình sử dụng ổn định. Việc đọc/ghi `localStorage` được cô lập trong `ha-tang/luu-tru`, giúp có thể thay thế bằng REST API ở giai đoạn sau.
+Một số thao tác cập nhật danh sách được tách thành service trong module nghiệp vụ; luồng nghiệp vụ hiện được phối hợp giữa các màn hình và `AppContext`, nơi cung cấp state qua `useApp()`. Việc đọc/ghi `localStorage` được cô lập trong `ha-tang/luu-tru`; đây là nền tảng để có thể tích hợp REST API ở giai đoạn sau, hiện chưa có backend.
 
 ## 6. Hướng dẫn cài đặt và chạy ứng dụng
 

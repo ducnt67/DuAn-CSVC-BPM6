@@ -1,0 +1,215 @@
+/* DUE University Official Footer Styles (matching Image 2) */
+.due-site-footer {
+  width: 100%;
+  margin-top: auto;
+  font-family: var(--font-family);
+  user-select: none;
+}
+
+/* 1. Top Orange Accent Stripe (Tone màu Cam DUE #F58220) */
+.footer-top-stripe {
+  height: 4px;
+  background-color: #F58220;
+  width: 100%;
+}
+
+/* 2. Main Footer Body in Sophisticated Deep Academic Blue (Tone Xanh DUE) */
+.footer-main-container {
+  background: linear-gradient(135deg, #0d4677 0%, #0f5694 50%, #1364ab 100%);
+  color: #ffffff;
+  padding: 40px 24px 34px 24px;
+}
+
+.footer-grid {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1.3fr 1fr;
+  gap: 40px;
+}
+
+@media (max-width: 992px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* Column 1: About & Mission */
+.footer-col-about {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-mission-text {
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: #e2e8f0;
+  margin: 0;
+  text-align: justify;
+}
+
+.footer-mission-text strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.footer-readmore-link {
+  color: #fed7aa;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+}
+
+.footer-readmore-link:hover {
+  color: #ffffff;
+  transform: translateX(3px);
+}
+
+/* Headings with orange underline */
+.footer-heading {
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 0;
+}
+
+.footer-heading-underline {
+  width: 42px;
+  height: 2.5px;
+  background-color: #F58220;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  border-radius: 2px;
+}
+
+/* Column 2: Contact Info */
+.footer-contact-dept {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.footer-contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e2e8f0;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footer-contact-row:hover {
+  color: #ffffff;
+}
+
+.footer-icon-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background-color: #F58220;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.footer-contact-text strong {
+  color: #ffffff;
+}
+
+/* Column 3: Social & Portal */
+.footer-social-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.footer-social-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.footer-social-btn:hover {
+  background: #ffffff;
+  color: #0f5694;
+  border-color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.footer-quick-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-portal-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footer-portal-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+/* 3. Bottom Sub-Footer Bar (Dark Navy) */
+.footer-bottom-bar {
+  background-color: #082947;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  padding: 13px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footer-bottom-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.footer-bottom-content strong {
+  color: #e2e8f0;
+}

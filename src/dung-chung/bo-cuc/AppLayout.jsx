@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import Footer from './Footer';
 import Toast from '../thanh-phan/Toast';
 import '../styles/layout.css';
 
@@ -26,6 +27,8 @@ export default function AppLayout() {
 
   return (
     <div className="app-layout">
+      <Header onToggleSidebar={handleToggleSidebar} />
+
       <Sidebar
         isOpen={mobileOpen}
         isCollapsed={desktopCollapsed}
@@ -33,14 +36,13 @@ export default function AppLayout() {
       />
 
       <div className={`main-wrapper ${desktopCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <Header onToggleSidebar={handleToggleSidebar} />
         <main className="main-content">
           <Outlet />
         </main>
+        <Footer />
       </div>
 
       <Toast />
     </div>
   );
 }
-
