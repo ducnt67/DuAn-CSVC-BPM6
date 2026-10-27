@@ -1,18 +1,17 @@
 import { useState, useMemo } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import { NAVIGATION } from '../hang-so/navigation';
 import { ROLE_LABELS } from '../hang-so/roles';
 import { REQUEST_STATUS } from '../hang-so/statuses';
 import {
-  ChevronDown, X, Phone, Mail, LogOut,
+  ChevronDown, X, Phone, Mail,
   Sliders, Shield, UserCheck, ChevronRight
 } from 'lucide-react';
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
-  const { currentUser, requests, logout, addToast } = useApp();
-  const navigate = useNavigate();
+  const { currentUser, requests } = useApp();
   const userRole = currentUser?.role;
 
   // Filter navigation groups and items by user role
@@ -79,12 +78,6 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
 
     return badges;
   }, [requests, currentUser]);
-
-  const handleLogout = () => {
-    logout();
-    addToast('Đã đăng xuất khỏi hệ thống thành công.', 'info');
-    navigate('/login');
-  };
 
   const initials = currentUser?.name
     ? currentUser.name
@@ -188,14 +181,6 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
                   {ROLE_LABELS[currentUser.role] || currentUser.role}
                 </div>
               </div>
-              <button
-                type="button"
-                className="sidebar-user-logout-btn"
-                onClick={handleLogout}
-                title="Đăng xuất để đổi vai trò"
-              >
-                <LogOut size={15} />
-              </button>
             </div>
           )}
 

@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu, LogOut, RotateCcw,
-  ChevronDown, LayoutDashboard, PlusCircle
+  ChevronDown, LayoutDashboard
 } from 'lucide-react';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
-import { ROLE_LABELS, ROLES } from '../hang-so/roles';
+import { ROLE_LABELS } from '../hang-so/roles';
 import UniversityLogo from '../thanh-phan/UniversityLogo';
 import Breadcrumb from './Breadcrumb';
 import NotificationPanel from './NotificationPanel';
@@ -53,8 +53,6 @@ export default function Header({ onToggleSidebar }) {
       .slice(-2)
       .join('')
     : 'DUE';
-
-  const canCreate = currentUser && [ROLES.REQUESTER, ROLES.FACILITY_ADMIN, ROLES.STAFF].includes(currentUser.role);
 
   return (
     <>
@@ -161,14 +159,6 @@ export default function Header({ onToggleSidebar }) {
         </div>
 
         <div className="header-right">
-          {/* Primary Action Button: Báo cáo sự cố mới in Orange (#F58220) */}
-          {canCreate && (
-            <Link to="/requests/create" className="btn-header-create" title="Tạo yêu cầu báo hỏng cơ sở vật chất">
-              <PlusCircle size={15} />
-              <span>Báo hỏng CSVC</span>
-            </Link>
-          )}
-
           {/* Reset Demo Data Button */}
           <button
             type="button"
@@ -178,17 +168,6 @@ export default function Header({ onToggleSidebar }) {
           >
             <RotateCcw size={13} />
             <span>Khôi phục dữ liệu mẫu</span>
-          </button>
-
-          {/* Standalone Quick Logout Button */}
-          <button
-            type="button"
-            className="btn-header-logout"
-            onClick={handleLogout}
-            title="Đăng xuất để đổi vai trò"
-          >
-            <LogOut size={14} />
-            <span>Đăng xuất</span>
           </button>
         </div>
       </header>
