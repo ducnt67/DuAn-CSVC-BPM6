@@ -1,0 +1,399 @@
+.my-requests-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-bottom: 48px;
+}
+
+/* Welcome Banner */
+.my-requests-welcome-card {
+  background: linear-gradient(135deg, #1677c8 0%, #0d5391 100%);
+  border-radius: 14px;
+  padding: 24px 28px;
+  color: #fff;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  box-shadow: 0 8px 24px rgba(22, 119, 200, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.my-requests-welcome-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.welcome-info-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.welcome-role-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(4px);
+  color: #fff;
+}
+
+.welcome-info-desc {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  max-width: 640px;
+  line-height: 1.4;
+}
+
+.btn-create-banner {
+  background: linear-gradient(135deg, #f58220 0%, #e06d10 100%);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+.btn-create-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* KPI Summary Cards */
+.my-requests-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-metric-card {
+  background-color: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.stat-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.stat-metric-card.active-filter {
+  border-color: var(--color-due-blue);
+  background-color: #f6fbff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 200, 0.18);
+}
+
+.stat-metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-metric-label {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.stat-metric-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.stat-metric-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-metric-card.alert-action {
+  border-color: #f59e0b;
+  background-color: #fffbeb;
+}
+
+.stat-metric-card.alert-action .stat-metric-number {
+  color: #b45309;
+}
+
+/* Filter Bar Extensions */
+.requester-filter-container {
+  background-color: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.requester-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-left-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+}
+
+.view-mode-toggle {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface-muted);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid var(--color-border);
+}
+
+.view-mode-btn {
+  border: none;
+  background: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.view-mode-btn.active {
+  background-color: #fff;
+  color: var(--color-due-blue);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Request Cards Grid */
+.request-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 768px) {
+  .request-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.request-ticket-card {
+  background-color: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.22s ease;
+  position: relative;
+}
+
+.request-ticket-card:hover {
+  transform: translateY(-3px);
+  border-color: #b9d8f3;
+  box-shadow: 0 8px 24px rgba(22, 119, 200, 0.1);
+}
+
+.ticket-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ticket-facility-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-fac-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ticket-id-tag {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-due-blue);
+}
+
+.ticket-title-link {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 6px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.ticket-title-link:hover {
+  color: var(--color-due-blue);
+}
+
+.ticket-location-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 14px;
+}
+
+.ticket-desc-snippet {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 5-Step Progress Tracker on Card */
+.ticket-process-tracker {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border: 1px solid #edf2f7;
+}
+
+.tracker-stage-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: 6px;
+}
+
+.tracker-current-stage-text {
+  color: var(--color-due-blue);
+  font-weight: 700;
+}
+
+.tracker-bar-container {
+  display: flex;
+  gap: 4px;
+  height: 6px;
+}
+
+.tracker-step-segment {
+  flex: 1;
+  border-radius: 3px;
+  background-color: #e2e8f0;
+}
+
+.tracker-step-segment.done {
+  background-color: #229a58;
+}
+
+.tracker-step-segment.current {
+  background-color: #1677c8;
+  box-shadow: 0 0 6px rgba(22, 119, 200, 0.4);
+}
+
+/* Card Footer Actions */
+.ticket-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-light);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ticket-technician-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticket-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Action button for Requester Confirmation */
+.btn-confirm-action {
+  background: linear-gradient(135deg, #229a58 0%, #1a7b45 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulseGreen 2.5s infinite;
+}
+
+@keyframes pulseGreen {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 154, 88, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 154, 88, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 154, 88, 0);
+  }
+}

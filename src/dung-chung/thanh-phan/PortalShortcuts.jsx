@@ -21,7 +21,7 @@ export default function PortalShortcuts() {
     {
       label: 'Tra cứu danh mục thiết bị, điều hòa & máy chiếu',
       path: '/facilities',
-      visible: true,
+      visible: [ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.PROCUREMENT].includes(role),
     },
     {
       label: 'Hộp thư phê duyệt phương án Ban Giám hiệu',

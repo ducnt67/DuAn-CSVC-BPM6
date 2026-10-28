@@ -13,7 +13,7 @@ export const MOCK_USERS = [
     phone: '0901234567',
     avatar: null,
     initials: 'MA',
-    roleDescription: 'Giảng viên/Cán bộ tạo yêu cầu sửa chữa, theo dõi và nghiệm thu nội bộ',
+    roleDescription: 'Sinh viên / Giảng viên báo hỏng cơ sở vật chất, theo dõi tiến độ và xác nhận hoàn thành',
   },
   {
     id: 'U02',
