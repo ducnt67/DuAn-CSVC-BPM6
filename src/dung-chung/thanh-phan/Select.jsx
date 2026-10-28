@@ -21,7 +21,7 @@ export default function Select({
     <div className={`form-group ${className}`}>
       {label && (
         <label htmlFor={selectId} className="form-label">
-          {label}
+          {typeof label === 'string' && required ? label.replace(/\s*\*+$/, '') : label}
           {required && <span className="required-mark">*</span>}
         </label>
       )}

@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu, LogOut, RotateCcw,
-  ChevronDown, LayoutDashboard
+  ChevronDown, LayoutDashboard, FileText
 } from 'lucide-react';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
-import { ROLE_LABELS } from '../hang-so/roles';
+import { ROLE_LABELS, ROLES } from '../hang-so/roles';
 import UniversityLogo from '../thanh-phan/UniversityLogo';
 import Breadcrumb from './Breadcrumb';
 import NotificationPanel from './NotificationPanel';
@@ -100,18 +100,32 @@ export default function Header({ onToggleSidebar }) {
 
                 <div className="user-dropdown-divider" />
 
-                {/* Dashboard Shortcut */}
-                <button
-                  type="button"
-                  className="user-dropdown-item"
-                  onClick={() => {
-                    setUserMenuOpen(false);
-                    navigate('/dashboard');
-                  }}
-                >
-                  <LayoutDashboard size={15} color="var(--color-due-blue)" />
-                  <span>Bảng điều khiển tổng quan</span>
-                </button>
+                {/* Dashboard or My Requests Shortcut */}
+                {currentUser?.role === ROLES.REQUESTER ? (
+                  <button
+                    type="button"
+                    className="user-dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/my-requests');
+                    }}
+                  >
+                    <FileText size={15} color="var(--color-due-blue)" />
+                    <span>Yêu cầu của tôi</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="user-dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/dashboard');
+                    }}
+                  >
+                    <LayoutDashboard size={15} color="var(--color-due-blue)" />
+                    <span>Bảng điều khiển tổng quan</span>
+                  </button>
+                )}
 
                 <div className="user-dropdown-divider" />
 
@@ -148,7 +162,11 @@ export default function Header({ onToggleSidebar }) {
           </button>
 
           {/* University Logo & Title (Matching Image 1) */}
-          <Link to="/dashboard" className="header-brand-link" title="Trường Đại học Kinh tế - ĐH Đà Nẵng">
+          <Link
+            to={currentUser?.role === ROLES.REQUESTER ? '/my-requests' : '/dashboard'}
+            className="header-brand-link"
+            title="Trường Đại học Kinh tế - ĐH Đà Nẵng"
+          >
             <UniversityLogo variant="default" size="sm" showSubtitle={true} />
           </Link>
 

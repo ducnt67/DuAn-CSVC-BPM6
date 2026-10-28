@@ -12,7 +12,8 @@ import {
 import {
   ArrowLeft, CheckCircle2, Clock, AlertTriangle, UserCheck,
   Wrench, FileText, Building2, Truck, ShieldCheck, CheckSquare,
-  MessageSquare, XCircle, Calendar, DollarSign, Paperclip, ChevronRight
+  MessageSquare, XCircle, Calendar, DollarSign, Paperclip, ChevronRight, Check,
+  Phone, CheckCircle
 } from 'lucide-react';
 import PageHeader from '../../../dung-chung/bo-cuc/PageHeader';
 import StatusBadge from '../../../dung-chung/thanh-phan/StatusBadge';
@@ -25,6 +26,7 @@ import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
 import { formatCurrency } from '../../../dung-chung/tien-ich/formatCurrency';
 import { generatePlanId, generateExternalWorkId } from '../../../dung-chung/tien-ich/generateId';
+import './RequestDetailPage.css';
 
 export default function RequestDetailPage() {
   const { id } = useParams();
@@ -104,6 +106,33 @@ export default function RequestDetailPage() {
   const staffUsers = useMemo(() => {
     return users.filter((u) => u.role === ROLES.STAFF);
   }, [users]);
+
+  // Is current viewer a requester
+  const isRequester = currentUser?.role === ROLES.REQUESTER;
+
+  // Assigned staff user details
+  const assignedStaff = useMemo(() => {
+    if (!request) return null;
+    if (request.assignedStaffId) {
+      return users.find((u) => u.id === request.assignedStaffId);
+    }
+    if (request.assignedStaffName) {
+      return users.find((u) => u.name === request.assignedStaffName);
+    }
+    return null;
+  }, [request, users]);
+
+  // Reception receiver info
+  const receptionInfo = useMemo(() => {
+    if (!request) return { isReceived: false, receiverName: '', receivedAt: '' };
+    const isReceived = request.status !== REQUEST_STATUS.NEW;
+    const acceptTimeline = request.timeline?.find(
+      (t) => t.stage?.toLowerCase().includes('tiếp nhận') || t.stage?.toLowerCase().includes('phân công')
+    );
+    const receiverName = acceptTimeline?.updatedBy || 'Bộ phận Quản trị CSVC';
+    const receivedAt = acceptTimeline?.updatedAt || request.createdAt;
+    return { isReceived, receiverName, receivedAt };
+  }, [request]);
 
   if (!request) {
     return (
@@ -688,12 +717,55 @@ export default function RequestDetailPage() {
     addToast('Yêu cầu sửa chữa đã được xác nhận HOÀN THÀNH!', 'success');
   };
 
+  const WORKFLOW_STAGES = [
+    { key: 'NEW', name: 'Khởi tạo', subtitle: 'Người yêu cầu' },
+    { key: 'ACCEPTED', name: 'Tiếp nhận & Phân công', subtitle: 'Quản trị CSVC' },
+    { key: 'SURVEYING', name: 'Khảo sát hiện trạng', subtitle: 'Cán bộ kỹ thuật' },
+    { key: 'PLAN', name: 'Phương án & Duyệt', subtitle: 'Lập & BGH duyệt' },
+    { key: 'EXECUTION', name: 'Sửa chữa / Thi công', subtitle: 'Nội bộ / Thuê ngoài' },
+    { key: 'ACCEPTANCE', name: 'Nghiệm thu / Xác nhận', subtitle: 'Kiểm tra & Nghiệm thu' },
+    { key: 'COMPLETED', name: 'Hoàn thành', subtitle: 'Kết thúc quy trình' },
+  ];
+
+  const currentStageIndex = useMemo(() => {
+    if (!request) return 0;
+    switch (request.status) {
+      case REQUEST_STATUS.NEW:
+        return 0;
+      case REQUEST_STATUS.ACCEPTED:
+      case REQUEST_STATUS.NEEDS_INFORMATION:
+        return 1;
+      case REQUEST_STATUS.SURVEYING:
+        return 2;
+      case REQUEST_STATUS.WAITING_FOR_PLAN:
+      case REQUEST_STATUS.WAITING_FOR_APPROVAL:
+        return 3;
+      case REQUEST_STATUS.INTERNAL_REPAIR:
+      case REQUEST_STATUS.WAITING_FOR_EXTERNAL_WORK:
+      case REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS:
+      case REQUEST_STATUS.NEEDS_REMEDIATION:
+        return 4;
+      case REQUEST_STATUS.WAITING_FOR_ACCEPTANCE:
+      case REQUEST_STATUS.WAITING_FOR_CONFIRMATION:
+        return 5;
+      case REQUEST_STATUS.COMPLETED:
+        return 6;
+      default:
+        return 0;
+    }
+  }, [request]);
+
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* Top Navigation */}
       <div style={{ marginBottom: 16 }}>
-        <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate(-1)}>
-          Quay lại danh sách
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={ArrowLeft}
+          onClick={() => (isRequester ? navigate('/my-requests') : navigate(-1))}
+        >
+          {isRequester ? 'Quay lại Yêu cầu của tôi' : 'Quay lại danh sách'}
         </Button>
       </div>
 
@@ -733,7 +805,7 @@ export default function RequestDetailPage() {
               </span>
               <PriorityBadge priority={request.priority} />
               <StatusBadge status={request.status} />
-              {request.repairType && (
+              {!isRequester && request.repairType && (
                 <span
                   style={{
                     fontSize: '0.75rem',
@@ -929,153 +1001,92 @@ export default function RequestDetailPage() {
         </div>
       </div>
 
-      {/* Visual Workflow Timeline Bar */}
-      <div
-        style={{
-          backgroundColor: 'var(--color-white)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--color-border)',
-          padding: 20,
-          boxShadow: 'var(--shadow-sm)',
-          marginBottom: 20,
-        }}
-      >
-        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text)', marginBottom: 16 }}>
-          Tiến trình quy trình xử lý (BPM Workflow)
+      {/* Visual Workflow Timeline Bar (BPM Stepper) */}
+      <div className="bpm-workflow-card">
+        <div className="bpm-workflow-header">
+          <div className="bpm-workflow-title-group">
+            <span className="bpm-workflow-badge">Quy trình BPM</span>
+            <h3 className="bpm-workflow-title">Tiến trình quy trình xử lý sự cố</h3>
+            <span className="bpm-workflow-subtitle">• 7 bước chuẩn hóa theo quy trình vận hành</span>
+          </div>
+
+          <div className="bpm-workflow-current-pill">
+            <span className="bpm-stage-pulsing-dot" />
+            <span>
+              {request.status === REQUEST_STATUS.COMPLETED ? (
+                <>Trạng thái: <strong>Đã hoàn thành toàn bộ quy trình</strong></>
+              ) : (
+                <>Hiện tại: <strong>Bước {currentStageIndex + 1}/7 - {WORKFLOW_STAGES[currentStageIndex]?.name}</strong></>
+              )}
+            </span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflowX: 'auto', paddingBottom: 8 }}>
-          {[
-            { key: 'NEW', label: '1. Khởi tạo' },
-            { key: 'ACCEPTED', label: '2. Tiếp nhận & Phân công' },
-            { key: 'SURVEYING', label: '3. Khảo sát' },
-            { key: 'PLAN', label: '4. Phương án & Duyệt' },
-            { key: 'EXECUTION', label: '5. Sửa chữa / Thi công' },
-            { key: 'ACCEPTANCE', label: '6. Nghiệm thu / Xác nhận' },
-            { key: 'COMPLETED', label: '7. Hoàn thành' },
-          ].map((stage, idx, arr) => {
-            // Determine active/completed state based on request status
-            const isCompleted =
-              request.status === REQUEST_STATUS.COMPLETED ||
-              (stage.key === 'NEW' && request.status !== REQUEST_STATUS.NEW) ||
-              (stage.key === 'ACCEPTED' && ![REQUEST_STATUS.NEW, REQUEST_STATUS.NEEDS_INFORMATION].includes(request.status)) ||
-              (stage.key === 'SURVEYING' && ![REQUEST_STATUS.NEW, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.SURVEYING].includes(request.status)) ||
-              (stage.key === 'PLAN' && ![REQUEST_STATUS.NEW, REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.SURVEYING, REQUEST_STATUS.WAITING_FOR_PLAN, REQUEST_STATUS.WAITING_FOR_APPROVAL].includes(request.status)) ||
-              (stage.key === 'EXECUTION' && [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.WAITING_FOR_CONFIRMATION, REQUEST_STATUS.COMPLETED].includes(request.status));
+        <div className="bpm-stepper-track-wrapper">
+          <div className="bpm-stepper-track">
+            {WORKFLOW_STAGES.map((stage, idx) => {
+              const isDone = idx < currentStageIndex || request.status === REQUEST_STATUS.COMPLETED;
+              const isCurr = idx === currentStageIndex && request.status !== REQUEST_STATUS.COMPLETED;
+              const isRemediation = idx === 4 && request.status === REQUEST_STATUS.NEEDS_REMEDIATION;
 
-            const isCurrent =
-              (stage.key === 'NEW' && request.status === REQUEST_STATUS.NEW) ||
-              (stage.key === 'ACCEPTED' && [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.NEEDS_INFORMATION].includes(request.status)) ||
-              (stage.key === 'SURVEYING' && request.status === REQUEST_STATUS.SURVEYING) ||
-              (stage.key === 'PLAN' && [REQUEST_STATUS.WAITING_FOR_PLAN, REQUEST_STATUS.WAITING_FOR_APPROVAL].includes(request.status)) ||
-              (stage.key === 'EXECUTION' && [REQUEST_STATUS.INTERNAL_REPAIR, REQUEST_STATUS.WAITING_FOR_EXTERNAL_WORK, REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS, REQUEST_STATUS.NEEDS_REMEDIATION].includes(request.status)) ||
-              (stage.key === 'ACCEPTANCE' && [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.WAITING_FOR_CONFIRMATION].includes(request.status)) ||
-              (stage.key === 'COMPLETED' && request.status === REQUEST_STATUS.COMPLETED);
+              // Left line connected if this step is reached (idx <= currentStageIndex)
+              const isLeftConnected = idx > 0 && idx <= currentStageIndex;
 
-            const isRemediation = stage.key === 'EXECUTION' && request.status === REQUEST_STATUS.NEEDS_REMEDIATION;
+              // Right line connected if next step is reached (idx < currentStageIndex)
+              const isRightConnected = idx < WORKFLOW_STAGES.length - 1 && idx < currentStageIndex;
 
-            return (
-              <div key={stage.key} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 120 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      backgroundColor: isRemediation
-                        ? 'var(--color-danger)'
-                        : isCompleted
-                        ? 'var(--color-green)'
-                        : isCurrent
-                        ? 'var(--color-blue)'
-                        : 'var(--color-surface-muted)',
-                      color: isCompleted || isCurrent || isRemediation ? '#FFF' : 'var(--color-text-secondary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 600,
-                      fontSize: '0.8rem',
-                      border: `2px solid ${isCurrent ? 'var(--color-blue)' : 'transparent'}`,
-                      boxShadow: isCurrent ? '0 0 0 3px rgba(22, 119, 200, 0.2)' : 'none',
-                    }}
-                  >
-                    {isCompleted ? <CheckCircle2 size={16} /> : idx + 1}
+              return (
+                <div key={stage.key} className="bpm-step-column">
+                  {/* Top Node Row with Left Line, Circle, Right Line */}
+                  <div className="bpm-node-row">
+                    {/* Left Line */}
+                    <div
+                      className={`bpm-node-line line-left ${idx === 0 ? 'is-hidden' : ''} ${isLeftConnected ? 'is-completed' : ''}`}
+                    />
+
+                    {/* Step Circle */}
+                    <div
+                      className={`bpm-node-circle ${isRemediation ? 'remediation' : isDone ? 'done' : isCurr ? 'current' : 'pending'}`}
+                      title={`Bước ${idx + 1}: ${stage.name}`}
+                    >
+                      {isRemediation ? (
+                        <AlertTriangle size={17} />
+                      ) : isDone ? (
+                        <Check size={18} strokeWidth={3} />
+                      ) : (
+                        <span>{idx + 1}</span>
+                      )}
+                    </div>
+
+                    {/* Right Line */}
+                    <div
+                      className={`bpm-node-line line-right ${idx === WORKFLOW_STAGES.length - 1 ? 'is-hidden' : ''} ${isRightConnected ? 'is-completed' : ''}`}
+                    />
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.75rem',
-                      fontWeight: isCurrent ? 700 : 500,
-                      color: isRemediation
-                        ? 'var(--color-danger)'
-                        : isCurrent
-                        ? 'var(--color-blue)'
-                        : isCompleted
-                        ? 'var(--color-green)'
-                        : 'var(--color-text-secondary)',
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {stage.label}
-                  </span>
+
+                  {/* Label below circle */}
+                  <div className="bpm-step-label-content">
+                    <div className={`bpm-step-index-label ${isCurr ? 'current' : isDone ? 'done' : ''}`}>
+                      Bước {idx + 1}
+                    </div>
+                    <div className={`bpm-step-main-title ${isCurr ? 'current' : isDone ? 'done' : ''}`}>
+                      {stage.name}
+                    </div>
+                    <div className="bpm-step-sub-role">
+                      {stage.subtitle}
+                    </div>
+                  </div>
                 </div>
-                {idx < arr.length - 1 && (
-                  <div
-                    style={{
-                      height: 2,
-                      flex: 1,
-                      backgroundColor: isCompleted ? 'var(--color-green)' : 'var(--color-border)',
-                      margin: '0 4px',
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 4,
-          borderBottom: '1px solid var(--color-border)',
-          marginBottom: 20,
-        }}
-      >
-        {[
-          { key: 'overview', label: 'Thông tin sự cố' },
-          { key: 'survey_plan', label: 'Khảo sát & Phương án' },
-          { key: 'work', label: 'Thực hiện & Thi công' },
-          { key: 'acceptance', label: `Nghiệm thu (${request.acceptanceRecords?.length || 0})` },
-          { key: 'history', label: `Lịch sử xử lý (${request.history?.length || 0})` },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '10px 18px',
-              border: 'none',
-              background: 'none',
-              fontSize: '0.875rem',
-              fontWeight: activeTab === tab.key ? 600 : 500,
-              color: activeTab === tab.key ? 'var(--color-blue)' : 'var(--color-text-secondary)',
-              borderBottom: `2px solid ${activeTab === tab.key ? 'var(--color-blue)' : 'transparent'}`,
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* TAB CONTENT 1: OVERVIEW */}
-      {activeTab === 'overview' && (
+      {/* MAIN CONTENT AREA: Dedicated Requester View VS Full Staff Tabs */}
+      {isRequester ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-          {/* Card: Chi tiết sự cố */}
+          {/* Card 1: Mô tả sự cố & Vị trí */}
           <div style={cardStyle}>
             <h3 style={cardTitleStyle}>Mô tả sự cố & Vị trí</h3>
             <div style={{ fontSize: '0.9rem', color: 'var(--color-text)', lineHeight: 1.6, marginBottom: 16 }}>
@@ -1138,342 +1149,656 @@ export default function RequestDetailPage() {
             )}
           </div>
 
-          {/* Card: Phụ trách & Đơn vị */}
+          {/* Card 2: Thông tin tiếp nhận & Nhân sự phụ trách */}
           <div style={cardStyle}>
-            <h3 style={cardTitleStyle}>Thông tin nhân sự xử lý</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: '0.875rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#EAF4FF', color: '#1677C8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <UserCheck size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Người gửi yêu cầu</div>
-                  <div style={{ fontWeight: 600 }}>{request.requesterName}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{request.department} • SĐT: {request.contactPhone || '—'}</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#FFF1E5', color: '#F58220', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Wrench size={18} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Cán bộ kỹ thuật phụ trách</div>
-                  <div style={{ fontWeight: 600 }}>{request.assignedStaffName || 'Chưa phân công'}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                    {request.assignedStaffName ? 'Tổ Kỹ thuật - CSVC' : 'Đang chờ Quản trị CSVC phân công'}
-                  </div>
-                </div>
-              </div>
-
-              {request.repairType === REPAIR_TYPE.EXTERNAL && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#E9F8EF', color: '#229A58', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Truck size={18} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Đơn vị thi công ngoài</div>
-                    <div style={{ fontWeight: 600 }}>{request.contractor || externalWork?.contractor || 'Chưa chỉ định'}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>BP Đầu tư & Mua sắm quản lý hồ sơ</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT 2: SURVEY & PLAN */}
-      {activeTab === 'survey_plan' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
-          {/* Card: Kết quả khảo sát */}
-          <div style={cardStyle}>
-            <h3 style={cardTitleStyle}>Kết quả khảo sát hiện trạng</h3>
-            {request.survey ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Cán bộ khảo sát:</span>
-                  <div style={{ fontWeight: 600 }}>{request.survey.surveyorName} ({formatDate(request.survey.completedAt)})</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Hiện trạng ghi nhận:</span>
-                  <div style={{ fontWeight: 500, marginTop: 2 }}>{request.survey.findings}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Nguyên nhân sự cố:</span>
-                  <div style={{ fontWeight: 500, marginTop: 2 }}>{request.survey.rootCause}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Mức độ hư hỏng:</span>
-                  <div style={{ fontWeight: 600, color: 'var(--color-danger)' }}>{request.survey.damageLevel}</div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-                Chưa có dữ liệu khảo sát. Cán bộ kỹ thuật phụ trách sẽ tiến hành kiểm tra hiện trường.
-              </div>
-            )}
-          </div>
-
-          {/* Card: Phương án & Phê duyệt */}
-          <div style={cardStyle}>
-            <h3 style={cardTitleStyle}>Phương án xử lý đề xuất</h3>
-            {plan || request.planId ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Mã & Tiêu đề phương án:</span>
-                  <div style={{ fontWeight: 600, color: 'var(--color-blue)' }}>{plan?.id || request.planId}: {plan?.title}</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div>
-                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Hình thức:</span>
-                    <div style={{ fontWeight: 600 }}>
-                      {request.repairType === REPAIR_TYPE.INTERNAL ? 'Sửa chữa nội bộ' : 'Thuê ngoài'}
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Dự toán chi phí:</span>
-                    <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>
-                      {formatCurrency(plan?.estimatedCost || request.estimatedCost || 0)}
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Thời gian dự kiến:</span>
-                  <div>{plan?.estimatedDuration || '2 ngày làm việc'}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Vật tư / Thiết bị thay thế:</span>
-                  <div>{plan?.materials || 'Vật tư theo tiêu chuẩn'}</div>
-                </div>
-                <div style={{ paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Trạng thái phê duyệt BGH:</span>
-                  <div style={{ marginTop: 4 }}>
-                    {plan?.approvalStatus === APPROVAL_STATUS.APPROVED || request.approvalStatus === APPROVAL_STATUS.APPROVED ? (
-                      <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>Đã được Ban Giám hiệu phê duyệt</span>
-                    ) : plan?.approvalStatus === APPROVAL_STATUS.REJECTED || request.approvalStatus === APPROVAL_STATUS.REJECTED ? (
-                      <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>
-                        Bị từ chối: {plan?.rejectionReason || request.rejectionReason}
-                      </span>
-                    ) : (
-                      <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>Đang chờ Ban Giám hiệu xem xét</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-                Chưa lập phương án xử lý.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT 3: EXECUTION / WORK */}
-      {activeTab === 'work' && (
-        <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>
-            {request.repairType === REPAIR_TYPE.INTERNAL
-              ? 'Tiến độ sửa chữa nội bộ'
-              : 'Hồ sơ thi công thuê ngoài (BP Đầu tư, Mua sắm & Xây dựng)'}
-          </h3>
-
-          {request.repairType === REPAIR_TYPE.INTERNAL ? (
-            request.internalRepairResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Kỹ thuật viên thực hiện:</span>
-                  <div style={{ fontWeight: 600 }}>{request.internalRepairResult.technician} ({formatDate(request.internalRepairResult.completedAt)})</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Công việc đã xử lý:</span>
-                  <div style={{ marginTop: 2 }}>{request.internalRepairResult.workDone}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Linh kiện / Vật tư đã thay:</span>
-                  <div style={{ marginTop: 2 }}>{request.internalRepairResult.partsReplaced || 'Không thay linh kiện'}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Kiểm tra thử nghiệm:</span>
-                  <div style={{ marginTop: 2, color: 'var(--color-green)', fontWeight: 500 }}>{request.internalRepairResult.testNotes}</div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-                Cán bộ phụ trách đang tiến hành xử lý kỹ thuật tại hiện trường.
-              </div>
-            )
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, fontSize: '0.8125rem' }}>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Mã công việc:</span>
-                  <div style={{ fontWeight: 600, color: 'var(--color-blue)' }}>{externalWork?.id || 'TN-0001'}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Đơn vị thi công:</span>
-                  <div style={{ fontWeight: 600 }}>{request.contractor || externalWork?.contractor || 'Chưa chỉ định'}</div>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-secondary)' }}>Tiến độ hoàn thành:</span>
-                  <div style={{ fontWeight: 700, color: 'var(--color-blue)', fontSize: '1rem' }}>
-                    {request.externalProgress ?? externalWork?.progress ?? 0}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4 }}>
-                  <span>Tiến độ thực tế</span>
-                  <span>{request.externalProgress ?? externalWork?.progress ?? 0}%</span>
-                </div>
-                <div style={{ height: 8, backgroundColor: 'var(--color-surface-muted)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      width: `${request.externalProgress ?? externalWork?.progress ?? 0}%`,
-                      backgroundColor: 'var(--color-blue)',
-                      transition: 'width 0.3s ease',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {request.status === REQUEST_STATUS.NEEDS_REMEDIATION && (
+            <h3 style={cardTitleStyle}>Thông tin tiếp nhận & Nhân sự phụ trách</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: '0.875rem' }}>
+              
+              {/* 1. Tình trạng tiếp nhận */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div
                   style={{
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--color-danger-light)',
-                    border: '1px solid #F5B8B8',
-                    color: 'var(--color-danger)',
-                    fontSize: '0.875rem',
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    backgroundColor: receptionInfo.isReceived ? '#E9F8EF' : '#FFF8E6',
+                    color: receptionInfo.isReceived ? '#229A58' : '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: 2,
                   }}
                 >
-                  <strong>Yêu cầu khắc phục sau nghiệm thu:</strong>
-                  <div style={{ marginTop: 4 }}>{request.remediationNotes}</div>
+                  {receptionInfo.isReceived ? <CheckCircle2 size={20} /> : <Clock size={20} />}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                    Tình trạng tiếp nhận yêu cầu
+                  </div>
+                  <div style={{ fontWeight: 700, color: receptionInfo.isReceived ? '#229A58' : '#D97706', marginTop: 2 }}>
+                    {receptionInfo.isReceived ? 'Đã tiếp nhận yêu cầu' : 'Đang chờ tiếp nhận'}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                    {receptionInfo.isReceived
+                      ? `Bộ phận: Phòng Quản trị Cơ sở vật chất (${receptionInfo.receiverName})`
+                      : 'Phòng Quản trị CSVC sẽ kiểm tra hồ sơ và tiếp nhận trong thời gian sớm nhất'}
+                  </div>
+                </div>
+              </div>
 
-      {/* TAB CONTENT 4: ACCEPTANCE (CRITICAL FOR WORKFLOW RULE) */}
-      {activeTab === 'acceptance' && (
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h3 style={cardTitleStyle}>Lịch sử nghiệm thu thực tế</h3>
-            {isReqAcceptanceSubmittable && (
-              <Button variant="warning" size="sm" icon={CheckSquare} onClick={() => setModalType('acceptance')}>
-                Thực hiện nghiệm thu mới
-              </Button>
-            )}
-          </div>
-
-          {request.acceptanceRecords && request.acceptanceRecords.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {request.acceptanceRecords.map((item, idx) => (
+              {/* 2. Cán bộ kỹ thuật phụ trách */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div
-                  key={item.id || idx}
                   style={{
-                    padding: 16,
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${item.result === 'PASS' ? '#B0E0C8' : '#F5B8B8'}`,
-                    backgroundColor: item.result === 'PASS' ? '#F6FCF8' : '#FFF8F8',
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    backgroundColor: request.assignedStaffName ? '#FFF1E5' : '#F1F5F9',
+                    color: request.assignedStaffName ? '#F58220' : '#94A3B8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: 2,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 4,
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          backgroundColor: item.result === 'PASS' ? 'var(--color-green)' : 'var(--color-danger)',
-                          color: '#FFF',
-                        }}
-                      >
-                        {item.result === 'PASS' ? 'NGHIỆM THU ĐẠT' : 'KHÔNG ĐẠT'}
-                      </span>
-                      <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                        Lần kiểm tra ngày: {item.inspectionDate || formatDate(item.timestamp)}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-                      Người kiểm tra: <strong>{item.inspectorName}</strong>
-                    </span>
+                  <Wrench size={19} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                    Cán bộ kỹ thuật phụ trách
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text)', marginTop: 2 }}>
+                    {request.assignedStaffName || 'Đang chờ phân công cán bộ kỹ thuật'}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                    {request.assignedStaffName
+                      ? (assignedStaff?.department || 'Tổ Kỹ thuật - Phòng Quản trị Cơ sở vật chất')
+                      : 'Hệ thống sẽ cập nhật thông tin và số điện thoại khi Quản trị CSVC chỉ định cán bộ'}
                   </div>
 
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-text)', marginBottom: 4 }}>
-                    <strong>Nội dung kiểm tra:</strong> {item.checkItems}
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
-                    <strong>Đánh giá thực tế:</strong> {item.notes}
-                  </div>
-
-                  {item.remediationNotes && (
+                  {request.assignedStaffName && (
                     <div
                       style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
                         marginTop: 8,
-                        padding: '8px 12px',
-                        backgroundColor: '#FFF0F0',
-                        borderRadius: 4,
-                        fontSize: '0.8125rem',
-                        color: 'var(--color-danger)',
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        backgroundColor: '#F0FDF4',
+                        border: '1px solid #DCFCE7',
+                        fontSize: '0.8rem',
+                        color: '#15803D',
+                        fontWeight: 600,
                       }}
                     >
-                      <strong>Nội dung bắt buộc khắc phục:</strong> {item.remediationNotes}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-              Chưa có bản ghi nghiệm thu nào cho yêu cầu này.
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB CONTENT 5: AUDIT HISTORY */}
-      {activeTab === 'history' && (
-        <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>Nhật ký lịch sử xử lý</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {request.history?.map((h, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  paddingBottom: 12,
-                  borderBottom: idx < request.history.length - 1 ? '1px solid var(--color-border-light)' : 'none',
-                }}
-              >
-                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--color-blue)', marginTop: 6, flexShrink: 0 }} />
-                <div style={{ flex: 1, fontSize: '0.8125rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{h.action}</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</span>
-                  </div>
-                  <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                    Thực hiện bởi: <strong>{h.performedBy}</strong>
-                  </div>
-                  {h.note && (
-                    <div style={{ marginTop: 4, color: 'var(--color-text)', fontStyle: 'italic' }}>
-                      "{h.note}"
+                      <Phone size={14} />
+                      <span>SĐT liên hệ: <strong>{assignedStaff?.phone || '0903456789'}</strong></span>
                     </div>
                   )}
                 </div>
               </div>
-            ))}
+
+              {/* 3. Người gửi yêu cầu */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    backgroundColor: '#EAF4FF',
+                    color: '#1677C8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: 2,
+                  }}
+                >
+                  <UserCheck size={19} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                    Người gửi yêu cầu
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: 2 }}>
+                    {request.requesterName}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                    {request.department} • SĐT: {request.contactPhone || '—'}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Action Banner for Requester when feedback is needed */}
+              {request.status === REQUEST_STATUS.WAITING_FOR_CONFIRMATION && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    padding: '14px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: '#E9F8EF',
+                    border: '1px solid #B0E0C8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1B7C46', fontWeight: 700, fontSize: '0.875rem' }}>
+                    <CheckCircle size={18} />
+                    <span>Kỹ thuật viên đã xử lý xong sự cố!</span>
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', color: '#1B7C46', lineHeight: 1.5 }}>
+                    Vui lòng kiểm tra thực tế thiết bị tại phòng học. Nhấn xác nhận để hoàn tất quy trình hoặc phản hồi nếu thiết bị chưa đạt.
+                  </div>
+                  <Button variant="primary" icon={CheckSquare} onClick={() => setModalType('requester_confirm')}>
+                    Xác nhận kết quả sửa chữa
+                  </Button>
+                </div>
+              )}
+
+              {request.status === REQUEST_STATUS.NEEDS_INFORMATION && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    padding: '14px 16px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: '#FFF8E6',
+                    border: '1px solid #FAD175',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#975A16', fontWeight: 700, fontSize: '0.875rem' }}>
+                    <AlertTriangle size={18} />
+                    <span>Yêu cầu bổ sung thêm thông tin</span>
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', color: '#975A16', lineHeight: 1.5 }}>
+                    Quản trị CSVC cần bạn cung cấp thêm thông tin vị trí hoặc hình ảnh hiện trạng để xử lý.
+                  </div>
+                  <Button
+                    variant="warning"
+                    icon={MessageSquare}
+                    onClick={() => {
+                      setSupplementNote('');
+                      setModalType('supplement');
+                    }}
+                  >
+                    Bổ sung thông tin ngay
+                  </Button>
+                </div>
+              )}
+
+              {request.status === REQUEST_STATUS.COMPLETED && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: '#F0F9FF',
+                    border: '1px solid #B9E6FE',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    color: '#026AA2',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  <CheckCircle2 size={18} color="#026AA2" />
+                  <span>Yêu cầu sửa chữa này đã hoàn thành toàn bộ quy trình. Cảm ơn bạn!</span>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
+      ) : (
+        <>
+          {/* Tabs Navigation for Staff / Admin / Director */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 4,
+              borderBottom: '1px solid var(--color-border)',
+              marginBottom: 20,
+            }}
+          >
+            {[
+              { key: 'overview', label: 'Thông tin sự cố' },
+              { key: 'survey_plan', label: 'Khảo sát & Phương án' },
+              { key: 'work', label: 'Thực hiện & Thi công' },
+              { key: 'acceptance', label: `Nghiệm thu (${request.acceptanceRecords?.length || 0})` },
+              { key: 'history', label: `Lịch sử xử lý (${request.history?.length || 0})` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  padding: '10px 18px',
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: activeTab === tab.key ? 600 : 500,
+                  color: activeTab === tab.key ? 'var(--color-blue)' : 'var(--color-text-secondary)',
+                  borderBottom: `2px solid ${activeTab === tab.key ? 'var(--color-blue)' : 'transparent'}`,
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* TAB CONTENT 1: OVERVIEW */}
+          {activeTab === 'overview' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+              {/* Card: Chi tiết sự cố */}
+              <div style={cardStyle}>
+                <h3 style={cardTitleStyle}>Mô tả sự cố & Vị trí</h3>
+                <div style={{ fontSize: '0.9rem', color: 'var(--color-text)', lineHeight: 1.6, marginBottom: 16 }}>
+                  {request.description}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: '0.8125rem' }}>
+                  <div>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Cơ sở vật chất:</span>
+                    <div style={{ fontWeight: 600 }}>{request.facilityName}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Mã thiết bị / phòng:</span>
+                    <div style={{ fontWeight: 600 }}>{request.facilityId}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Tòa nhà:</span>
+                    <div style={{ fontWeight: 600 }}>{request.building}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Phòng / Vị trí:</span>
+                    <div style={{ fontWeight: 600 }}>{request.location}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Thời điểm phát hiện:</span>
+                    <div style={{ fontWeight: 600 }}>{formatDate(request.discoveredAt)}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Mức độ ưu tiên:</span>
+                    <div><PriorityBadge priority={request.priority} /></div>
+                  </div>
+                </div>
+
+                {request.attachments?.length > 0 && (
+                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--color-border-light)' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                      Tài liệu / Ảnh đính kèm:
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                      {request.attachments.map((file, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '4px 10px',
+                            backgroundColor: 'var(--color-surface-muted)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: '0.75rem',
+                            border: '1px solid var(--color-border)',
+                          }}
+                        >
+                          <Paperclip size={13} color="#1677C8" />
+                          <span>{file}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Card: Phụ trách & Đơn vị */}
+              <div style={cardStyle}>
+                <h3 style={cardTitleStyle}>Thông tin nhân sự xử lý</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: '0.875rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#EAF4FF', color: '#1677C8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <UserCheck size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Người gửi yêu cầu</div>
+                      <div style={{ fontWeight: 600 }}>{request.requesterName}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{request.department} • SĐT: {request.contactPhone || '—'}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#FFF1E5', color: '#F58220', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Wrench size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Cán bộ kỹ thuật phụ trách</div>
+                      <div style={{ fontWeight: 600 }}>{request.assignedStaffName || 'Chưa phân công'}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
+                        {request.assignedStaffName ? 'Tổ Kỹ thuật - CSVC' : 'Đang chờ Quản trị CSVC phân công'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {request.repairType === REPAIR_TYPE.EXTERNAL && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#E9F8EF', color: '#229A58', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Truck size={18} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Đơn vị thi công ngoài</div>
+                        <div style={{ fontWeight: 600 }}>{request.contractor || externalWork?.contractor || 'Chưa chỉ định'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>BP Đầu tư & Mua sắm quản lý hồ sơ</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB CONTENT 2: SURVEY & PLAN */}
+          {activeTab === 'survey_plan' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+              {/* Card: Kết quả khảo sát */}
+              <div style={cardStyle}>
+                <h3 style={cardTitleStyle}>Kết quả khảo sát hiện trạng</h3>
+                {request.survey ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Cán bộ khảo sát:</span>
+                      <div style={{ fontWeight: 600 }}>{request.survey.surveyorName} ({formatDate(request.survey.completedAt)})</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Hiện trạng ghi nhận:</span>
+                      <div style={{ fontWeight: 500, marginTop: 2 }}>{request.survey.findings}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Nguyên nhân sự cố:</span>
+                      <div style={{ fontWeight: 500, marginTop: 2 }}>{request.survey.rootCause}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Mức độ hư hỏng:</span>
+                      <div style={{ fontWeight: 600, color: 'var(--color-danger)' }}>{request.survey.damageLevel}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                    Chưa có dữ liệu khảo sát. Cán bộ kỹ thuật phụ trách sẽ tiến hành kiểm tra hiện trường.
+                  </div>
+                )}
+              </div>
+
+              {/* Card: Phương án & Phê duyệt */}
+              <div style={cardStyle}>
+                <h3 style={cardTitleStyle}>Phương án xử lý đề xuất</h3>
+                {plan || request.planId ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Mã & Tiêu đề phương án:</span>
+                      <div style={{ fontWeight: 600, color: 'var(--color-blue)' }}>{plan?.id || request.planId}: {plan?.title}</div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Hình thức:</span>
+                        <div style={{ fontWeight: 600 }}>
+                          {request.repairType === REPAIR_TYPE.INTERNAL ? 'Sửa chữa nội bộ' : 'Thuê ngoài'}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Dự toán chi phí:</span>
+                        <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>
+                          {formatCurrency(plan?.estimatedCost || request.estimatedCost || 0)}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Thời gian dự kiến:</span>
+                      <div>{plan?.estimatedDuration || '2 ngày làm việc'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Vật tư / Thiết bị thay thế:</span>
+                      <div>{plan?.materials || 'Vật tư theo tiêu chuẩn'}</div>
+                    </div>
+                    <div style={{ paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Trạng thái phê duyệt BGH:</span>
+                      <div style={{ marginTop: 4 }}>
+                        {plan?.approvalStatus === APPROVAL_STATUS.APPROVED || request.approvalStatus === APPROVAL_STATUS.APPROVED ? (
+                          <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>Đã được Ban Giám hiệu phê duyệt</span>
+                        ) : plan?.approvalStatus === APPROVAL_STATUS.REJECTED || request.approvalStatus === APPROVAL_STATUS.REJECTED ? (
+                          <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>
+                            Bị từ chối: {plan?.rejectionReason || request.rejectionReason}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>Đang chờ Ban Giám hiệu xem xét</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                    Chưa lập phương án xử lý.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB CONTENT 3: EXECUTION / WORK */}
+          {activeTab === 'work' && (
+            <div style={cardStyle}>
+              <h3 style={cardTitleStyle}>
+                {request.repairType === REPAIR_TYPE.INTERNAL
+                  ? 'Tiến độ sửa chữa nội bộ'
+                  : 'Hồ sơ thi công thuê ngoài (BP Đầu tư, Mua sắm & Xây dựng)'}
+              </h3>
+
+              {request.repairType === REPAIR_TYPE.INTERNAL ? (
+                request.internalRepairResult ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Kỹ thuật viên thực hiện:</span>
+                      <div style={{ fontWeight: 600 }}>{request.internalRepairResult.technician} ({formatDate(request.internalRepairResult.completedAt)})</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Công việc đã xử lý:</span>
+                      <div style={{ marginTop: 2 }}>{request.internalRepairResult.workDone}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Linh kiện / Vật tư đã thay:</span>
+                      <div style={{ marginTop: 2 }}>{request.internalRepairResult.partsReplaced || 'Không thay linh kiện'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Kiểm tra thử nghiệm:</span>
+                      <div style={{ marginTop: 2, color: 'var(--color-green)', fontWeight: 500 }}>{request.internalRepairResult.testNotes}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                    Cán bộ phụ trách đang tiến hành xử lý kỹ thuật tại hiện trường.
+                  </div>
+                )
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, fontSize: '0.8125rem' }}>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Mã công việc:</span>
+                      <div style={{ fontWeight: 600, color: 'var(--color-blue)' }}>{externalWork?.id || 'TN-0001'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Đơn vị thi công:</span>
+                      <div style={{ fontWeight: 600 }}>{request.contractor || externalWork?.contractor || 'Chưa chỉ định'}</div>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Tiến độ hoàn thành:</span>
+                      <div style={{ fontWeight: 700, color: 'var(--color-blue)', fontSize: '1rem' }}>
+                        {request.externalProgress ?? externalWork?.progress ?? 0}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4 }}>
+                      <span>Tiến độ thực tế</span>
+                      <span>{request.externalProgress ?? externalWork?.progress ?? 0}%</span>
+                    </div>
+                    <div style={{ height: 8, backgroundColor: 'var(--color-surface-muted)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          width: `${request.externalProgress ?? externalWork?.progress ?? 0}%`,
+                          backgroundColor: 'var(--color-blue)',
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {request.status === REQUEST_STATUS.NEEDS_REMEDIATION && (
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--color-danger-light)',
+                        border: '1px solid #F5B8B8',
+                        color: 'var(--color-danger)',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      <strong>Yêu cầu khắc phục sau nghiệm thu:</strong>
+                      <div style={{ marginTop: 4 }}>{request.remediationNotes}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT 4: ACCEPTANCE (CRITICAL FOR WORKFLOW RULE) */}
+          {activeTab === 'acceptance' && (
+            <div style={cardStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={cardTitleStyle}>Lịch sử nghiệm thu thực tế</h3>
+                {isReqAcceptanceSubmittable && (
+                  <Button variant="warning" size="sm" icon={CheckSquare} onClick={() => setModalType('acceptance')}>
+                    Thực hiện nghiệm thu mới
+                  </Button>
+                )}
+              </div>
+
+              {request.acceptanceRecords && request.acceptanceRecords.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {request.acceptanceRecords.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      style={{
+                        padding: 16,
+                        borderRadius: 'var(--radius-md)',
+                        border: `1px solid ${item.result === 'PASS' ? '#B0E0C8' : '#F5B8B8'}`,
+                        backgroundColor: item.result === 'PASS' ? '#F6FCF8' : '#FFF8F8',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              backgroundColor: item.result === 'PASS' ? 'var(--color-green)' : 'var(--color-danger)',
+                              color: '#FFF',
+                            }}
+                          >
+                            {item.result === 'PASS' ? 'NGHIỆM THU ĐẠT' : 'KHÔNG ĐẠT'}
+                          </span>
+                          <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                            Lần kiểm tra ngày: {item.inspectionDate || formatDate(item.timestamp)}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                          Người kiểm tra: <strong>{item.inspectorName}</strong>
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--color-text)', marginBottom: 4 }}>
+                        <strong>Nội dung kiểm tra:</strong> {item.checkItems}
+                      </div>
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                        <strong>Đánh giá thực tế:</strong> {item.notes}
+                      </div>
+
+                      {item.remediationNotes && (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: '8px 12px',
+                            backgroundColor: '#FFF0F0',
+                            borderRadius: 4,
+                            fontSize: '0.8125rem',
+                            color: 'var(--color-danger)',
+                          }}
+                        >
+                          <strong>Nội dung bắt buộc khắc phục:</strong> {item.remediationNotes}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                  Chưa có bản ghi nghiệm thu nào cho yêu cầu này.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT 5: AUDIT HISTORY */}
+          {activeTab === 'history' && (
+            <div style={cardStyle}>
+              <h3 style={cardTitleStyle}>Nhật ký lịch sử xử lý</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {request.history?.map((h, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      gap: 12,
+                      paddingBottom: 12,
+                      borderBottom: idx < request.history.length - 1 ? '1px solid var(--color-border-light)' : 'none',
+                    }}
+                  >
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--color-blue)', marginTop: 6, flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: '0.8125rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{h.action}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{formatDate(h.timestamp)}</span>
+                      </div>
+                      <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                        Thực hiện bởi: <strong>{h.performedBy}</strong>
+                      </div>
+                      {h.note && (
+                        <div style={{ marginTop: 4, color: 'var(--color-text)', fontStyle: 'italic' }}>
+                          "{h.note}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ================= MODALS FOR WORKFLOW ACTIONS ================= */}

@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
+import { ROLES } from '../hang-so/roles';
 import './Breadcrumb.css';
 
 const ROUTE_LABELS = {
@@ -18,20 +20,25 @@ const ROUTE_LABELS = {
 
 export default function Breadcrumb({ isLight = false }) {
   const location = useLocation();
+  const { currentUser } = useApp();
+  const isRequester = currentUser?.role === ROLES.REQUESTER;
+  const homePath = isRequester ? '/my-requests' : '/dashboard';
+  const homeLabel = isRequester ? 'Yêu cầu của tôi' : 'Bảng điều khiển';
+
   const pathnames = location.pathname.split('/').filter((x) => x);
 
-  if (pathnames.length === 0 || pathnames[0] === 'dashboard') {
+  if (pathnames.length === 0 || (pathnames[0] === 'dashboard' && !isRequester) || (pathnames[0] === 'my-requests' && isRequester)) {
     return (
       <div className={`due-breadcrumb ${isLight ? 'breadcrumb-dark-text' : 'breadcrumb-light-text'}`}>
         <Home size={15} />
-        <span className="breadcrumb-current-text">Bảng điều khiển</span>
+        <span className="breadcrumb-current-text">{homeLabel}</span>
       </div>
     );
   }
 
   return (
     <nav className={`due-breadcrumb ${isLight ? 'breadcrumb-dark-text' : 'breadcrumb-light-text'}`}>
-      <Link to="/dashboard" className="breadcrumb-home-link" title="Về trang chủ">
+      <Link to={homePath} className="breadcrumb-home-link" title="Về trang chủ">
         <Home size={15} />
       </Link>
       {pathnames.map((name, index) => {

@@ -15,7 +15,7 @@ export const NAVIGATION = [
         label: 'Tổng quan',
         path: '/dashboard',
         icon: LayoutDashboard,
-        roles: [ROLES.REQUESTER, ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.DIRECTOR, ROLES.PROCUREMENT],
+        roles: [ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.DIRECTOR, ROLES.PROCUREMENT],
       },
     ],
   },
@@ -93,7 +93,7 @@ export const NAVIGATION = [
         label: 'Cơ sở vật chất',
         path: '/facilities',
         icon: Building2,
-        roles: [ROLES.FACILITY_ADMIN, ROLES.REQUESTER, ROLES.STAFF, ROLES.PROCUREMENT],
+        roles: [ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.PROCUREMENT],
       },
       {
         key: 'reports',

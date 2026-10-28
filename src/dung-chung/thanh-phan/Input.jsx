@@ -23,7 +23,7 @@ export default function Input({
     <div className={`form-group ${className}`}>
       {label && (
         <label htmlFor={inputId} className="form-label">
-          {label}
+          {typeof label === 'string' && required ? label.replace(/\s*\*+$/, '') : label}
           {required && <span className="required-mark">*</span>}
         </label>
       )}
