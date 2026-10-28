@@ -72,7 +72,7 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
 
     // 6. Acceptance for Staff
     const acceptCount = requests.filter(
-      r => r.status === REQUEST_STATUS.WAITING_FOR_ACCEPTANCE
+      r => [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE, REQUEST_STATUS.OVERDUE_REMEDIATION, REQUEST_STATUS.NEEDS_REMEDIATION].includes(r.status)
     ).length;
     if (acceptCount > 0) badges['acceptance'] = { count: acceptCount, type: 'success' };
 

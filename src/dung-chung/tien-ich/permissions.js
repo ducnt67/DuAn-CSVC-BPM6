@@ -80,7 +80,7 @@ export function canRejectInternalResult(request, currentUser) {
 export function canSubmitAcceptance(request, currentUser) {
   return (
     request.repairType === 'EXTERNAL' &&
-    [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.NEEDS_REMEDIATION].includes(request.status) &&
+    [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.NEEDS_REMEDIATION, REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE, REQUEST_STATUS.OVERDUE_REMEDIATION].includes(request.status) &&
     currentUser.role === ROLES.STAFF &&
     currentUser.id === request.assignedStaffId
   );

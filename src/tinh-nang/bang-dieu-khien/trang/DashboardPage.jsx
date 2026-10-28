@@ -38,7 +38,7 @@ export default function DashboardPage() {
       REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
       REQUEST_STATUS.WAITING_FOR_CONFIRMATION,
     ].includes(r.status)).length;
-    const needsRemediation = requests.filter((r) => r.status === REQUEST_STATUS.NEEDS_REMEDIATION).length;
+    const needsRemediation = requests.filter((r) => [REQUEST_STATUS.NEEDS_REMEDIATION, REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE, REQUEST_STATUS.OVERDUE_REMEDIATION].includes(r.status)).length;
     const completed = requests.filter((r) => r.status === REQUEST_STATUS.COMPLETED).length;
 
     return { total, newReqs, inProgress, pendingApproval, waitingReview, needsRemediation, completed };
