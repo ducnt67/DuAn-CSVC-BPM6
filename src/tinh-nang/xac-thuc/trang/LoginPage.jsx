@@ -442,7 +442,7 @@ export default function LoginPage() {
                     letterSpacing: '0.04em',
                   }}
                 >
-                  Danh sách tài khoản demo (5 vai trò)
+                  Danh sách tài khoản demo
                 </span>
                 <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)' }}>
                   Mật khẩu chung: <strong>123</strong>
@@ -475,7 +475,7 @@ export default function LoginPage() {
                             color: 'var(--color-text)',
                           }}
                         >
-                          {ROLE_LABELS[u.role]}:
+                          {u.userTypeLabel || u.roleTitle || ROLE_LABELS[u.role]}:
                         </span>
                         <span style={{ color: 'var(--color-text-secondary)' }}>
                           <strong>{u.username}</strong> ({u.name})

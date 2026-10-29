@@ -838,37 +838,73 @@ export default function RequestDetailPage() {
 
           {/* Actor-based Quick Action Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            {/* Facility Admin actions */}
+            {/* Facility Admin actions - Sequential & Logical Workflow */}
             {isReqAcceptable && (
-              <Button variant="primary" icon={CheckCircle2} onClick={handleAccept}>
-                Tiếp nhận yêu cầu
-              </Button>
+              <>
+                <Button variant="primary" icon={CheckCircle2} onClick={handleAccept}>
+                  Tiếp nhận yêu cầu
+                </Button>
+                {isReqInfoRequestable && (
+                  <Button
+                    variant="outline"
+                    icon={MessageSquare}
+                    onClick={() => {
+                      setRequestInfoNote('');
+                      setModalType('request_info');
+                    }}
+                    title="Yêu cầu người gửi làm rõ nếu thông tin sự cố chưa cụ thể"
+                  >
+                    Yêu cầu bổ sung
+                  </Button>
+                )}
+              </>
             )}
 
             {isReqAssignable && (
-              <Button
-                variant="outline"
-                icon={UserCheck}
-                onClick={() => {
-                  setAssignData({ staffId: staffUsers[0]?.id || '', note: '' });
-                  setModalType('assign');
-                }}
-              >
-                Phân công cán bộ
-              </Button>
+              <>
+                <Button
+                  variant="primary"
+                  icon={UserCheck}
+                  onClick={() => {
+                    setAssignData({ staffId: staffUsers[0]?.id || '', note: '' });
+                    setModalType('assign');
+                  }}
+                >
+                  Phân công cán bộ
+                </Button>
+                {isReqInfoRequestable && (
+                  <Button
+                    variant="ghost"
+                    icon={MessageSquare}
+                    onClick={() => {
+                      setRequestInfoNote('');
+                      setModalType('request_info');
+                    }}
+                  >
+                    Yêu cầu bổ sung
+                  </Button>
+                )}
+              </>
             )}
 
-            {isReqInfoRequestable && (
-              <Button
-                variant="ghost"
-                icon={MessageSquare}
-                onClick={() => {
-                  setRequestInfoNote('');
-                  setModalType('request_info');
+            {request.status === REQUEST_STATUS.NEEDS_INFORMATION && currentUser?.role === ROLES.FACILITY_ADMIN && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  backgroundColor: '#FFFBEB',
+                  border: '1px solid #FDE68A',
+                  color: '#D97706',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
                 }}
               >
-                Yêu cầu bổ sung
-              </Button>
+                <Clock size={15} />
+                Đang chờ người gửi bổ sung thông tin
+              </span>
             )}
 
             {/* Requester actions */}

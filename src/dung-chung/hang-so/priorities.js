@@ -6,16 +6,16 @@ export const PRIORITY = {
 };
 
 export const PRIORITY_LABELS = {
-  [PRIORITY.LOW]: 'Thấp',
-  [PRIORITY.MEDIUM]: 'Trung bình',
-  [PRIORITY.HIGH]: 'Cao',
+  [PRIORITY.LOW]: 'Xử lý sau',
+  [PRIORITY.MEDIUM]: 'Xử lý sớm',
+  [PRIORITY.HIGH]: 'Khẩn cấp',
   [PRIORITY.URGENT]: 'Khẩn cấp',
 };
 
 export const PRIORITY_COLORS = {
-  [PRIORITY.LOW]: { bg: '#F0F3F7', text: '#65748B', border: '#D5DCE5' },
-  [PRIORITY.MEDIUM]: { bg: '#EAF4FF', text: '#1677C8', border: '#B8D9F5' },
-  [PRIORITY.HIGH]: { bg: '#FFF1E5', text: '#D97B0D', border: '#F5D4A8' },
-  [PRIORITY.URGENT]: { bg: '#FFF0F0', text: '#D64545', border: '#F5B8B8' },
+  [PRIORITY.LOW]: { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
+  [PRIORITY.MEDIUM]: { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' },
+  [PRIORITY.HIGH]: { bg: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
+  [PRIORITY.URGENT]: { bg: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' },
 };
 

@@ -141,12 +141,12 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
                           to={item.path}
                           onClick={onClose}
                           className={({ isActive }) =>
-                            `sidebar-item-link ${isActive ? 'active' : ''}`
+                            `sidebar-item-link ${item.isSubItem ? 'sidebar-sub-item' : ''} ${isActive ? 'active' : ''}`
                           }
                           title={item.label}
                         >
                           <span className="sidebar-item-icon-box">
-                            <Icon size={17} />
+                            <Icon size={item.isSubItem ? 15 : 17} />
                           </span>
                           <span className="sidebar-item-label">{item.label}</span>
 

@@ -56,13 +56,12 @@ export default function DashboardPage() {
     ].filter((d) => d.value > 0);
   }, [requests]);
 
-  // Chart data: Priorities
+  // Chart data: Priorities (3 levels: Xử lý sau, Xử lý sớm, Khẩn cấp)
   const priorityData = useMemo(() => {
     return [
-      { name: 'Thấp', count: requests.filter((r) => r.priority === PRIORITY.LOW).length },
-      { name: 'Trung bình', count: requests.filter((r) => r.priority === PRIORITY.MEDIUM).length },
-      { name: 'Cao', count: requests.filter((r) => r.priority === PRIORITY.HIGH).length },
-      { name: 'Khẩn cấp', count: requests.filter((r) => r.priority === PRIORITY.URGENT).length },
+      { name: 'Xử lý sau', count: requests.filter((r) => r.priority === PRIORITY.LOW).length },
+      { name: 'Xử lý sớm', count: requests.filter((r) => r.priority === PRIORITY.MEDIUM).length },
+      { name: 'Khẩn cấp', count: requests.filter((r) => r.priority === PRIORITY.HIGH || r.priority === PRIORITY.URGENT).length },
     ];
   }, [requests]);
 
@@ -236,7 +235,7 @@ export default function DashboardPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
                 <th style={{ padding: '10px 12px' }}>Mã YC</th>
-                <th style={{ padding: '10px 12px' }}>Tiêu đề</th>
+                <th style={{ padding: '10px 12px' }}>Mô tả sự cố</th>
                 <th style={{ padding: '10px 12px' }}>Cơ sở vật chất</th>
                 <th style={{ padding: '10px 12px' }}>Ưu tiên</th>
                 <th style={{ padding: '10px 12px' }}>Trạng thái</th>
@@ -255,7 +254,7 @@ export default function DashboardPage() {
                     {req.id}
                   </td>
                   <td style={{ padding: '12px', fontWeight: 500, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {req.title}
+                    {req.description || req.title}
                   </td>
                   <td style={{ padding: '12px', color: 'var(--color-text-secondary)' }}>
                     {req.facilityName} ({req.location})

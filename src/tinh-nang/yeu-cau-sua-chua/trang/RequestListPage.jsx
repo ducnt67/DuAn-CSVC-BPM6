@@ -44,10 +44,10 @@ export default function RequestListPage() {
       if (search) {
         const query = search.toLowerCase();
         const matchesCode = req.id.toLowerCase().includes(query);
-        const matchesTitle = req.title.toLowerCase().includes(query);
+        const matchesContent = (req.description || '').toLowerCase().includes(query) || (req.title || '').toLowerCase().includes(query);
         const matchesFacility = req.facilityName?.toLowerCase().includes(query);
         const matchesRequester = req.requesterName?.toLowerCase().includes(query);
-        if (!matchesCode && !matchesTitle && !matchesFacility && !matchesRequester) return false;
+        if (!matchesCode && !matchesContent && !matchesFacility && !matchesRequester) return false;
       }
       if (statusFilter && req.status !== statusFilter) return false;
       if (priorityFilter && req.priority !== priorityFilter) return false;
@@ -149,12 +149,25 @@ export default function RequestListPage() {
       ),
     },
     {
-      title: 'Tiêu đề yêu cầu',
-      field: 'title',
+      title: 'Mô tả sự cố',
+      field: 'description',
       sortable: true,
       render: (val, row) => (
         <div>
-          <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>{val}</div>
+          <div
+            style={{
+              fontWeight: 600,
+              color: 'var(--color-text)',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              lineHeight: 1.35,
+            }}
+            title={val || row.title}
+          >
+            {val || row.title}
+          </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 2 }}>
             {row.facilityName} • {row.location}
           </div>
@@ -217,7 +230,7 @@ export default function RequestListPage() {
       render: (_, row) => {
         const isFacilityAdmin = currentUser?.role === ROLES.FACILITY_ADMIN;
         const canAccept = isFacilityAdmin && row.status === REQUEST_STATUS.NEW;
-        const canAssign = isFacilityAdmin && [REQUEST_STATUS.NEW, REQUEST_STATUS.ACCEPTED].includes(row.status);
+        const canAssign = isFacilityAdmin && row.status === REQUEST_STATUS.ACCEPTED;
 
         return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
@@ -277,7 +290,7 @@ export default function RequestListPage() {
         <SearchInput
           value={search}
           onChange={setSearch}
-          placeholder="Tìm mã, tiêu đề, phòng, người gửi..."
+          placeholder="Tìm mã YC, mô tả sự cố, phòng, người gửi..."
           style={{ width: 280 }}
         />
 

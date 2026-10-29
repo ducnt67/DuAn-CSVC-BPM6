@@ -19,7 +19,7 @@ export function canRequestInfo(request, currentUser) {
 
 export function canAssignStaff(request, currentUser) {
   return (
-    [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.NEW].includes(request.status) &&
+    request.status === REQUEST_STATUS.ACCEPTED &&
     currentUser.role === ROLES.FACILITY_ADMIN
   );
 }

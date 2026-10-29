@@ -96,7 +96,7 @@ export default function ReportsPage() {
 
     const headers = [
       'Mã Yêu Cầu',
-      'Tiêu Đề',
+      'Mô Tả Sự Cố',
       'Cơ Sở Vật Chất',
       'Tòa Nhà',
       'Phòng',
@@ -112,7 +112,7 @@ export default function ReportsPage() {
 
     const rows = filteredRequests.map((r) => [
       `"${r.id}"`,
-      `"${(r.title || '').replace(/"/g, '""')}"`,
+      `"${(r.description || r.title || '').replace(/"/g, '""')}"`,
       `"${(r.facilityName || '').replace(/"/g, '""')}"`,
       `"${r.building || ''}"`,
       `"${r.location || ''}"`,
@@ -292,7 +292,7 @@ export default function ReportsPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', textTransform: 'uppercase', fontSize: '0.75rem' }}>
                 <th style={{ padding: '8px 10px' }}>Mã YC</th>
-                <th style={{ padding: '8px 10px' }}>Tiêu đề</th>
+                <th style={{ padding: '8px 10px' }}>Mô tả sự cố</th>
                 <th style={{ padding: '8px 10px' }}>Tòa nhà</th>
                 <th style={{ padding: '8px 10px' }}>Hình thức</th>
                 <th style={{ padding: '8px 10px' }}>Kinh phí (VND)</th>
@@ -304,7 +304,9 @@ export default function ReportsPage() {
               {filteredRequests.map((r) => (
                 <tr key={r.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                   <td style={{ padding: '10px', fontWeight: 600, color: 'var(--color-blue)' }}>{r.id}</td>
-                  <td style={{ padding: '10px', fontWeight: 500 }}>{r.title}</td>
+                  <td style={{ padding: '10px', fontWeight: 500, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.description || r.title}
+                  </td>
                   <td style={{ padding: '10px' }}>{r.building}</td>
                   <td style={{ padding: '10px' }}>{REPAIR_TYPE_LABELS[r.repairType] || '—'}</td>
                   <td style={{ padding: '10px', fontWeight: 600 }}>{formatCurrency(r.estimatedCost || 0)}</td>

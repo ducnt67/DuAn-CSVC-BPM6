@@ -35,6 +35,7 @@ export const NAVIGATION = [
         path: '/requests/create',
         icon: PlusCircle,
         roles: [ROLES.REQUESTER],
+        isSubItem: true,
       },
       {
         key: 'request-list',
