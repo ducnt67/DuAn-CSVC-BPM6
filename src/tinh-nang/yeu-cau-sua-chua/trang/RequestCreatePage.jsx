@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
 import { REQUEST_STATUS } from '../../../dung-chung/hang-so/statuses';
@@ -26,6 +26,7 @@ import {
   GraduationCap,
   Briefcase,
   AlertCircle,
+  AlertTriangle,
   HelpCircle,
   Package,
 } from 'lucide-react';
@@ -41,8 +42,16 @@ export default function RequestCreatePage() {
   const { currentUser, addRequest, addToast } = useApp();
   const navigate = useNavigate();
 
-  // Selected requester role (Lecturer/Staff or Student)
-  const [requesterType, setRequesterType] = useState('LECTURER');
+  // Determine requester category automatically from logged in account
+  const isStudent =
+    currentUser?.userType === 'STUDENT' ||
+    currentUser?.role === 'STUDENT' ||
+    currentUser?.requesterType === 'STUDENT' ||
+    Boolean(currentUser?.roleTitle && currentUser.roleTitle.toLowerCase().includes('sinh viên')) ||
+    Boolean(currentUser?.username && currentUser.username.toLowerCase().startsWith('sv')) ||
+    Boolean(currentUser?.department && currentUser.department.toLowerCase().includes('lớp'));
+
+  const requesterType = isStudent ? 'STUDENT' : 'LECTURER';
 
   // Selected general facility (empty by default so user can choose)
   const [selectedFacilityId, setSelectedFacilityId] = useState(null);
@@ -61,6 +70,18 @@ export default function RequestCreatePage() {
     contactName: currentUser?.name || '',
     department: currentUser?.department || '',
   });
+
+  // Sync form data with current user when switching account or mounting
+  useEffect(() => {
+    if (currentUser) {
+      setFormData((prev) => ({
+        ...prev,
+        contactName: currentUser.name || prev.contactName || '',
+        contactPhone: currentUser.phone || prev.contactPhone || '',
+        department: currentUser.department || prev.department || '',
+      }));
+    }
+  }, [currentUser?.id]);
 
   const [attachments, setAttachments] = useState([]);
   const [errors, setErrors] = useState({});
@@ -124,11 +145,6 @@ export default function RequestCreatePage() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.title.trim()) {
-      newErrors.title = 'Vui lòng nhập tiêu đề sự cố';
-    } else if (formData.title.trim().length < 5) {
-      newErrors.title = 'Tiêu đề cần tối thiểu 5 ký tự';
-    }
 
     if (!selectedFacilityId) {
       newErrors.facilityId = 'Vui lòng chọn loại cơ sở vật chất';
@@ -170,10 +186,12 @@ export default function RequestCreatePage() {
     const facilityName = currentFacility ? currentFacility.name : 'Cơ sở vật chất';
     const facilityType = currentFacility ? currentFacility.shortName : 'Khác';
     const facilityCategory = currentFacility ? currentFacility.id : 'khac';
+    const cleanDesc = formData.description.trim();
+    const autoTitle = cleanDesc.split('\n')[0].slice(0, 90) || `Báo hỏng ${facilityName}`;
 
     const newRequest = {
       id: newRequestId,
-      title: formData.title.trim(),
+      title: autoTitle,
       facilityId: currentFacility ? `CSVC-${currentFacility.id.toUpperCase()}` : 'CSVC-GEN',
       facilityName: `${facilityName} (${formData.location.trim()})`,
       facilityCategory: facilityCategory,
@@ -260,60 +278,64 @@ export default function RequestCreatePage() {
         {/* LEFT COLUMN: Main Form */}
         <div className="create-form-card">
           <form onSubmit={handleSubmit}>
-            {/* 1. Chọn đối tượng người gửi */}
+            {/* 1. Tư cách người gửi yêu cầu (Tự động lấy theo tài khoản đăng nhập) */}
             <div className="form-section-block">
               <div className="form-section-header">
                 <span className="section-number-badge">1</span>
                 <div>
-                  <h3 className="section-title">Bạn gửi yêu cầu với tư cách là</h3>
-                  <div className="section-desc">Chọn đúng đối tượng để bộ phận kỹ thuật phối hợp phù hợp nhất</div>
+                  <h3 className="section-title">Tư cách người gửi yêu cầu</h3>
+                  <div className="section-desc">
+                    Hệ thống tự động xác định từ tài khoản đăng nhập
+                  </div>
                 </div>
               </div>
 
-              <div className="requester-type-selector">
-                <button
-                  type="button"
-                  className={`requester-type-chip ${requesterType === 'LECTURER' ? 'selected' : ''}`}
-                  onClick={() => setRequesterType('LECTURER')}
-                >
-                  <Briefcase size={18} />
-                  <span>Giảng viên / Cán bộ nhân viên</span>
-                  {requesterType === 'LECTURER' && <Check size={16} />}
-                </button>
-
-                <button
-                  type="button"
-                  className={`requester-type-chip ${requesterType === 'STUDENT' ? 'selected' : ''}`}
-                  onClick={() => setRequesterType('STUDENT')}
-                >
-                  <GraduationCap size={18} />
-                  <span>Sinh viên / Học viên</span>
-                  {requesterType === 'STUDENT' && <Check size={16} />}
-                </button>
+              {/* Thẻ hiển thị vai trò tự động - không cho chọn thủ công */}
+              <div className="requester-identity-card">
+                <div className="requester-identity-main">
+                  <div className={`requester-identity-avatar ${isStudent ? 'student' : 'lecturer'}`}>
+                    {isStudent ? <GraduationCap size={20} /> : <Briefcase size={20} />}
+                  </div>
+                  <div className="requester-identity-details">
+                    <span className="requester-identity-sub">Bạn đang gửi yêu cầu với tư cách:</span>
+                    <span className="requester-identity-name">
+                      {isStudent ? 'Sinh viên / Học viên' : 'Giảng viên / Cán bộ nhân viên'}
+                    </span>
+                  </div>
+                </div>
+                <div className="requester-identity-badge">
+                  <Check size={14} />
+                  <span>Xác thực từ tài khoản</span>
+                </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+              {/* 3 ô input thông tin người gửi: Họ tên, Khoa/Lớp, Số điện thoại - Thẳng hàng chuẩn tuyệt đối */}
+              <div className="requester-inputs-row">
                 <Input
                   label="Họ và tên người gửi"
                   required
+                  iconLeft={User}
                   value={formData.contactName}
                   onChange={(e) => handleInputChange('contactName', e.target.value)}
                   placeholder="Họ và tên"
                 />
 
                 <Input
-                  label={requesterType === 'LECTURER' ? 'Khoa / Bộ môn / Đơn vị' : 'Lớp sinh hoạt / Khoa'}
+                  label={isStudent ? 'Lớp sinh hoạt / Khoa' : 'Khoa / Đơn vị công tác'}
+                  iconLeft={isStudent ? GraduationCap : Briefcase}
                   value={formData.department}
                   onChange={(e) => handleInputChange('department', e.target.value)}
-                  placeholder={requesterType === 'LECTURER' ? 'VD: Khoa QTKD' : 'VD: 47K01.1 - Khoa QTKD'}
+                  placeholder={isStudent ? 'VD: 47K01.1 - Khoa QTKD' : 'VD: Khoa Quản trị Kinh doanh'}
                 />
 
                 <Input
-                  label="Số điện thoại liên hệ (để CBKT gọi trực tiếp)"
+                  label="Số điện thoại liên hệ"
                   required
+                  iconLeft={Phone}
                   value={formData.contactPhone}
                   onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                   placeholder="VD: 0901234567"
+                  hint="CBKT sẽ liên hệ trực tiếp số này để phối hợp"
                   error={errors.contactPhone}
                 />
               </div>
@@ -443,56 +465,135 @@ export default function RequestCreatePage() {
               </div>
             </div>
 
-            {/* 4. Mức độ ưu tiên / Khẩn cấp */}
+            {/* 4. Mức độ ưu tiên / Khẩn cấp (3 mức: Xử lý sau, Xử lý sớm, Khẩn cấp) */}
             <div className="form-section-block">
               <div className="form-section-header">
                 <span className="section-number-badge">4</span>
                 <div>
                   <h3 className="section-title">Mức độ khẩn cấp của sự cố</h3>
-                  <div className="section-desc">Đánh giá mức độ ảnh hưởng để ưu tiên sắp xếp lịch sửa chữa</div>
+                  <div className="section-desc">
+                    Đánh giá mức độ ảnh hưởng để kỹ thuật viên ưu tiên điều phối và xử lý kịp thời
+                  </div>
                 </div>
               </div>
 
-              <div className="priority-selector-grid">
+              <div className="priority-cards-grid">
+                {/* 1. Xử lý sau */}
                 <div
-                  className={`priority-card-opt p-low ${formData.priority === PRIORITY.LOW ? 'selected' : ''}`}
+                  className={`priority-card-premium opt-low ${formData.priority === PRIORITY.LOW ? 'selected' : ''}`}
                   onClick={() => handleInputChange('priority', PRIORITY.LOW)}
+                  role="button"
+                  tabIndex={0}
                 >
-                  <span className="priority-badge-pill" style={{ color: 'var(--color-green)' }}>
-                    🟢 Thấp / Bình thường
-                  </span>
-                  <span className="priority-desc-text">
-                    Sự cố nhỏ, chưa ảnh hưởng ngay đến việc dạy & học, có thể xử lý định kỳ.
-                  </span>
+                  <div className="priority-card-top">
+                    <div className="priority-icon-wrapper low">
+                      <Clock size={20} />
+                    </div>
+                    <div className="priority-sla-tag low">3 - 5 ngày</div>
+                    <div className="priority-radio-circle">
+                      {formData.priority === PRIORITY.LOW && <div className="priority-radio-dot" />}
+                    </div>
+                  </div>
+
+                  <div className="priority-card-body">
+                    <div className="priority-card-title low">
+                      <span>Xử lý sau</span>
+                      <span className="priority-level-chip">Mức 1</span>
+                    </div>
+                    <p className="priority-card-desc">
+                      Sự cố nhỏ, thiết bị còn dùng tạm được, chưa ảnh hưởng ngay đến việc dạy & học, có thể xử lý định kỳ.
+                    </p>
+                  </div>
+
+                  <div className="priority-card-footer">
+                    <div className="priority-meter-bars">
+                      <span className="meter-bar active low" />
+                      <span className="meter-bar" />
+                      <span className="meter-bar" />
+                    </div>
+                    <span className="priority-footer-status">Ưu tiên: Thường</span>
+                  </div>
                 </div>
 
+                {/* 2. Xử lý sớm */}
                 <div
-                  className={`priority-card-opt p-medium ${formData.priority === PRIORITY.MEDIUM ? 'selected' : ''}`}
+                  className={`priority-card-premium opt-medium ${formData.priority === PRIORITY.MEDIUM ? 'selected' : ''}`}
                   onClick={() => handleInputChange('priority', PRIORITY.MEDIUM)}
+                  role="button"
+                  tabIndex={0}
                 >
-                  <span className="priority-badge-pill" style={{ color: 'var(--color-warning)' }}>
-                    🟡 Cần xử lý sớm (Trong tuần)
-                  </span>
-                  <span className="priority-desc-text">
-                    Ảnh hưởng đến tiện nghi hoặc lịch học sắp tới trong tuần.
-                  </span>
+                  <div className="priority-card-top">
+                    <div className="priority-icon-wrapper medium">
+                      <AlertCircle size={20} />
+                    </div>
+                    <div className="priority-sla-tag medium">Trong 24h - 48h</div>
+                    <div className="priority-radio-circle">
+                      {formData.priority === PRIORITY.MEDIUM && <div className="priority-radio-dot" />}
+                    </div>
+                  </div>
+
+                  <div className="priority-card-body">
+                    <div className="priority-card-title medium">
+                      <span>Xử lý sớm</span>
+                      <span className="priority-level-chip">Mức 2</span>
+                    </div>
+                    <p className="priority-card-desc">
+                      Ảnh hưởng đến tiện nghi, thiết bị giảng dạy hoặc sắp tới lịch học/thi trong tuần, cần khắc phục sớm.
+                    </p>
+                  </div>
+
+                  <div className="priority-card-footer">
+                    <div className="priority-meter-bars">
+                      <span className="meter-bar active medium" />
+                      <span className="meter-bar active medium" />
+                      <span className="meter-bar" />
+                    </div>
+                    <span className="priority-footer-status">Ưu tiên: Cần gấp</span>
+                  </div>
                 </div>
 
+                {/* 3. Khẩn cấp */}
                 <div
-                  className={`priority-card-opt p-urgent ${formData.priority === PRIORITY.URGENT || formData.priority === PRIORITY.HIGH ? 'selected' : ''}`}
+                  className={`priority-card-premium opt-urgent ${formData.priority === PRIORITY.HIGH || formData.priority === PRIORITY.URGENT ? 'selected' : ''}`}
                   onClick={() => handleInputChange('priority', PRIORITY.HIGH)}
+                  role="button"
+                  tabIndex={0}
                 >
-                  <span className="priority-badge-pill" style={{ color: 'var(--color-danger)' }}>
-                    🔴 Khẩn cấp / Cần ngay
-                  </span>
-                  <span className="priority-desc-text">
-                    Nguy cơ chập cháy, an toàn, mất điện/nước toàn khu hoặc phòng đang diễn ra buổi thi/sự kiện.
-                  </span>
+                  <div className="priority-card-top">
+                    <div className="priority-icon-wrapper urgent">
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div className="priority-sla-tag urgent">Ứng cứu ngay</div>
+                    <div className="priority-radio-circle">
+                      {(formData.priority === PRIORITY.HIGH || formData.priority === PRIORITY.URGENT) && (
+                        <div className="priority-radio-dot" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="priority-card-body">
+                    <div className="priority-card-title urgent">
+                      <span>Khẩn cấp</span>
+                      <span className="priority-level-chip">Mức 3</span>
+                    </div>
+                    <p className="priority-card-desc">
+                      Nguy cơ chập cháy, mất điện/nước toàn khu, phòng thi đang diễn ra hoặc sự cố đe dọa an toàn nghiêm trọng.
+                    </p>
+                  </div>
+
+                  <div className="priority-card-footer">
+                    <div className="priority-meter-bars">
+                      <span className="meter-bar active urgent" />
+                      <span className="meter-bar active urgent" />
+                      <span className="meter-bar active urgent" />
+                    </div>
+                    <span className="priority-footer-status">Ưu tiên: Cao nhất</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 5. Tiêu đề & Chi tiết sự cố */}
+            {/* 5. Mô tả chi tiết tình trạng sự cố */}
             <div className="form-section-block">
               <div className="form-section-header">
                 <span className="section-number-badge">5</span>
@@ -501,19 +602,6 @@ export default function RequestCreatePage() {
                   <div className="section-desc">Cung cấp hiện tượng để cán bộ kỹ thuật chuẩn bị trước linh kiện, công cụ</div>
                 </div>
               </div>
-
-              <Input
-                label="Tiêu đề yêu cầu sửa chữa"
-                required
-                placeholder={
-                  currentFacility
-                    ? `VD: ${currentFacility.shortName} không hoạt động, chảy nước, hỏng nguồn...`
-                    : 'VD: Điều hòa không lạnh, máy chiếu không lên nguồn, quạt rung lắc...'
-                }
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                error={errors.title}
-              />
 
               <Textarea
                 label="Mô tả cụ thể hiện trạng hư hỏng"
@@ -638,13 +726,6 @@ export default function RequestCreatePage() {
                     Cơ sở vật chất trường DUE
                   </div>
                 </div>
-              </div>
-
-              <div className="ticket-preview-meta-row">
-                <span className="ticket-meta-label">Tiêu đề sự cố:</span>
-                <span className="ticket-meta-value" style={{ fontSize: '0.95rem' }}>
-                  {formData.title || '(Chưa nhập tiêu đề)'}
-                </span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

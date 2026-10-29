@@ -20,7 +20,14 @@ function getInitialCollection(key, fallback) {
 }
 
 export function AppProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => readStorage(STORAGE_KEYS.CURRENT_USER, null));
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = readStorage(STORAGE_KEYS.CURRENT_USER, null);
+    if (saved?.id) {
+      const fresh = findUserById(MOCK_USERS, saved.id);
+      return fresh ? { ...saved, ...fresh } : saved;
+    }
+    return saved;
+  });
   const [requests, setRequests] = useState(() => getInitialCollection(STORAGE_KEYS.REQUESTS, MOCK_REQUESTS));
   const [facilities, setFacilities] = useState(() => getInitialCollection(STORAGE_KEYS.FACILITIES, MOCK_FACILITIES));
   const [repairPlans, setRepairPlans] = useState(() => getInitialCollection(STORAGE_KEYS.REPAIR_PLANS, MOCK_REPAIR_PLANS));

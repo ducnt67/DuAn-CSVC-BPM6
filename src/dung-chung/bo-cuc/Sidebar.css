@@ -179,6 +179,51 @@
   color: #ffffff;
 }
 
+/* Sub-items in Sidebar (Child / Extension level indented) */
+.sidebar-item-link.sidebar-sub-item {
+  margin-left: 18px;
+  padding: 7px 10px 7px 14px;
+  font-size: 0.8rem;
+  color: #d1e5f7;
+  position: relative;
+  border-left: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.sidebar-item-link.sidebar-sub-item::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 7px;
+  height: 1.5px;
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+.sidebar-item-link.sidebar-sub-item:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  padding-left: 16px;
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-item-link.sidebar-sub-item.active {
+  background-color: #1677c8;
+  color: #ffffff;
+  font-weight: 700;
+  padding-left: 14px;
+  border-left-color: var(--color-primary, #ff7a00);
+}
+
+.sidebar-item-link.sidebar-sub-item.active::before {
+  display: none;
+}
+
+.sidebar-item-link.sidebar-sub-item.active::after {
+  background-color: var(--color-primary, #ff7a00);
+  height: 2px;
+}
+
 /* Item Badges */
 .sidebar-item-badge {
   font-size: 0.625rem;

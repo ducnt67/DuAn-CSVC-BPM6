@@ -60,34 +60,6 @@ function resolveFacilityCategory(req) {
   return COMMON_FACILITIES[11]; // khac
 }
 
-// 7-Stage BPM progress helper matching RequestDetailPage
-function getProcessStage(status) {
-  switch (status) {
-    case REQUEST_STATUS.NEW:
-      return { step: 1, label: 'Khởi tạo yêu cầu' };
-    case REQUEST_STATUS.ACCEPTED:
-    case REQUEST_STATUS.NEEDS_INFORMATION:
-      return { step: 2, label: 'Tiếp nhận & Phân công' };
-    case REQUEST_STATUS.SURVEYING:
-      return { step: 3, label: 'Khảo sát hiện trạng' };
-    case REQUEST_STATUS.WAITING_FOR_PLAN:
-    case REQUEST_STATUS.WAITING_FOR_APPROVAL:
-      return { step: 4, label: 'Lập & Duyệt phương án' };
-    case REQUEST_STATUS.INTERNAL_REPAIR:
-    case REQUEST_STATUS.WAITING_FOR_EXTERNAL_WORK:
-    case REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS:
-    case REQUEST_STATUS.NEEDS_REMEDIATION:
-      return { step: 5, label: 'Đang sửa chữa / Thi công' };
-    case REQUEST_STATUS.WAITING_FOR_CONFIRMATION:
-      return { step: 6, label: 'Chờ bạn xác nhận kết quả' };
-    case REQUEST_STATUS.WAITING_FOR_ACCEPTANCE:
-      return { step: 6, label: 'Đang nghiệm thu kỹ thuật' };
-    case REQUEST_STATUS.COMPLETED:
-      return { step: 7, label: 'Đã hoàn thành' };
-    default:
-      return { step: 1, label: 'Khởi tạo' };
-  }
-}
 
 export default function MyRequestsPage() {
   const { requests, currentUser, updateRequest, addToast } = useApp();
@@ -139,10 +111,10 @@ export default function MyRequestsPage() {
       if (search) {
         const q = search.toLowerCase();
         const matchId = r.id.toLowerCase().includes(q);
-        const matchTitle = (r.title || '').toLowerCase().includes(q);
+        const matchContent = ((r.description || '') + ' ' + (r.title || '')).toLowerCase().includes(q);
         const matchFac = (r.facilityName || '').toLowerCase().includes(q);
         const matchLoc = (r.location || '').toLowerCase().includes(q);
-        if (!matchId && !matchTitle && !matchFac && !matchLoc) return false;
+        if (!matchId && !matchContent && !matchFac && !matchLoc) return false;
       }
 
       // Building filter (Khu A, C, D, E, F, G, H)
@@ -290,13 +262,25 @@ export default function MyRequestsPage() {
       ),
     },
     {
-      title: 'Tiêu đề sự cố',
-      field: 'title',
+      title: 'Mô tả sự cố',
+      field: 'description',
       sortable: true,
       render: (val, row) => (
         <div>
-          <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text)', lineHeight: 1.35 }}>
-            {val}
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              color: 'var(--color-text)',
+              lineHeight: 1.35,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+            title={val || row.title}
+          >
+            {val || row.title}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
             {row.building} • {row.location}
@@ -675,7 +659,6 @@ export default function MyRequestsPage() {
           {filteredRequests.map((req) => {
             const category = resolveFacilityCategory(req);
             const Icon = category.icon;
-            const stage = getProcessStage(req.status);
             const isWaitingConfirmation = req.status === REQUEST_STATUS.WAITING_FOR_CONFIRMATION;
             const isNeedsInfo = req.status === REQUEST_STATUS.NEEDS_INFORMATION;
 
@@ -705,18 +688,19 @@ export default function MyRequestsPage() {
                     </div>
                   </div>
 
-                  {/* Title */}
+                  {/* Incident Description / Title */}
                   <div
                     className="ticket-title-link"
                     onClick={() => {
                       setDetailRequest(req);
                       setDetailModalOpen(true);
                     }}
+                    title={req.description || req.title}
                   >
-                    {req.title}
+                    {req.description || req.title}
                   </div>
 
-                  {/* Location & Building */}
+                  {/* Location & Building & Date */}
                   <div className="ticket-location-meta">
                     <MapPin size={14} color="var(--color-due-blue)" />
                     <span>
@@ -725,32 +709,6 @@ export default function MyRequestsPage() {
                     <span>•</span>
                     <Calendar size={14} color="var(--color-text-tertiary)" />
                     <span>{formatDate(req.createdAt)}</span>
-                  </div>
-
-                  {/* Description snippet */}
-                  <div className="ticket-desc-snippet">{req.description}</div>
-
-                  {/* 7-Step BPM Process Tracker */}
-                  <div className="ticket-process-tracker">
-                    <div className="tracker-stage-label">
-                      <span>Tiến trình xử lý (BPM)</span>
-                      <span className="tracker-current-stage-text">
-                        Bước {stage.step}/7: {stage.label}
-                      </span>
-                    </div>
-                    <div className="tracker-bar-container">
-                      {[1, 2, 3, 4, 5, 6, 7].map((stepIdx) => {
-                        const isDone = req.status === REQUEST_STATUS.COMPLETED || stepIdx < stage.step;
-                        const isCurrent = stepIdx === stage.step && req.status !== REQUEST_STATUS.COMPLETED;
-                        return (
-                          <div
-                            key={stepIdx}
-                            className={`tracker-step-segment ${isDone ? 'done' : ''} ${isCurrent ? 'current' : ''}`}
-                            title={`Bước ${stepIdx}`}
-                          />
-                        );
-                      })}
-                    </div>
                   </div>
                 </div>
 
@@ -1000,8 +958,10 @@ export default function MyRequestsPage() {
               <StatusBadge status={detailRequest.status} />
             </div>
 
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 8 }}>
-              {detailRequest.title}
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text)', marginBottom: 16, lineHeight: 1.4 }}>
+              {detailRequest.title && detailRequest.title !== detailRequest.description
+                ? detailRequest.title
+                : `${resolveFacilityCategory(detailRequest).name} • ${detailRequest.building} - ${detailRequest.location}`}
             </h3>
 
             <div

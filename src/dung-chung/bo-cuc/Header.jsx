@@ -77,7 +77,7 @@ export default function Header({ onToggleSidebar }) {
               <span className="topbar-user-meta">
                 <span className="topbar-user-displayname">{currentUser?.name || 'Khách'}</span>
                 <span className="topbar-user-role">
-                  {ROLE_LABELS[currentUser?.role] || 'Khách'}
+                  {currentUser?.userTypeLabel || currentUser?.roleTitle || ROLE_LABELS[currentUser?.role] || 'Khách'}
                 </span>
               </span>
               <ChevronDown size={13} className={`topbar-caret ${userMenuOpen ? 'open' : ''}`} />
@@ -94,7 +94,7 @@ export default function Header({ onToggleSidebar }) {
                   <div className="user-dropdown-username">@{currentUser?.username}</div>
                   <div className="user-dropdown-dept">{currentUser?.department}</div>
                   <div className="user-dropdown-role">
-                    {ROLE_LABELS[currentUser?.role] || currentUser?.role}
+                    {currentUser?.userTypeLabel || currentUser?.roleTitle || ROLE_LABELS[currentUser?.role] || currentUser?.role}
                   </div>
                 </div>
 
