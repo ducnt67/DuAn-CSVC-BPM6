@@ -338,16 +338,21 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             f"Hiện trạng: {findings} | Nguyên nhân: {root_cause}",
             timeline_stage="Khảo sát hiện trạng",
         )
+        notify_role(
+            Role.FACILITY_ADMIN,
+            "Yêu cầu đã khảo sát xong",
+            f"{obj.code}: {obj.title} đang chờ lập phương án.",
+            request=obj,
+            notification_type="info",
+        )
         return Response(self.get_serializer(obj).data)
 
     @action(detail=True, methods=["post"], url_path="repair-plan")
     @transaction.atomic
     def create_repair_plan(self, request, code=None):
         obj = self._get_object()
-        require_role(request.user, Role.STAFF)
-        if obj.assigned_staff_id != request.user.id:
-            raise PermissionDenied("Chỉ cán bộ được phân công mới được lập phương án.")
-        require_status(obj, RequestStatus.SURVEYING, RequestStatus.WAITING_FOR_PLAN)
+        require_role(request.user, Role.FACILITY_ADMIN)
+        require_status(obj, RequestStatus.WAITING_FOR_PLAN)
         data = request.data
         title = str(data.get("title", "")).strip()
         repair_type = data.get("repairType")
@@ -491,11 +496,10 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             timeline_status="FAILED",
         )
         notify_role(
-            Role.STAFF,
+            Role.FACILITY_ADMIN,
             "Phương án bị từ chối",
             f"{obj.code}: {reason}",
             request=obj,
-            recipient=obj.assigned_staff,
             notification_type="warning",
         )
         return Response(self.get_serializer(obj).data)

@@ -34,9 +34,8 @@ export function canSurvey(request, currentUser) {
 
 export function canCreatePlan(request, currentUser) {
   return (
-    [REQUEST_STATUS.SURVEYING, REQUEST_STATUS.WAITING_FOR_PLAN].includes(request.status) &&
-    currentUser.role === ROLES.STAFF &&
-    currentUser.id === request.assignedStaffId
+    request.status === REQUEST_STATUS.WAITING_FOR_PLAN &&
+    currentUser.role === ROLES.FACILITY_ADMIN
   );
 }
 
@@ -118,4 +117,3 @@ export function canSupplementInfo(request, currentUser) {
     currentUser.id === request.requesterId
   );
 }
-

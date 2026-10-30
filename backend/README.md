@@ -81,8 +81,8 @@ Các tài khoản này được tạo trong database local bởi `seed_demo`. M�
 |---|---|---|
 | `nmanh` | Giảng viên / người yêu cầu | Tạo yêu cầu, theo dõi và xác nhận kết quả |
 | `sv_hoang` | Sinh viên / người yêu cầu | Tạo và theo dõi yêu cầu với vai trò sinh viên |
-| `tqhuy` | Quản trị CSVC | Tiếp nhận yêu cầu, yêu cầu bổ sung, phân công cán bộ |
-| `lhnam` | Cán bộ kỹ thuật | Khảo sát, lập phương án, cập nhật sửa chữa và nghiệm thu |
+| `tqhuy` | Quản trị CSVC | Tiếp nhận yêu cầu, yêu cầu bổ sung, phân công cán bộ, lập phương án |
+| `lhnam` | Cán bộ kỹ thuật | Khảo sát, cập nhật sửa chữa và nghiệm thu |
 | `nttha` | Ban Giám hiệu | Phê duyệt hoặc từ chối phương án |
 | `pvbinh` | Đầu tư & Mua sắm | Cập nhật công việc thuê ngoài |
 
@@ -107,6 +107,8 @@ Tài khoản đăng nhập web cần có `username`, mật khẩu, được bậ
    - `STAFF`: cán bộ kỹ thuật.
    - `DIRECTOR`: Ban Giám hiệu.
    - `PROCUREMENT`: Đầu tư & Mua sắm.
+
+   Trong luồng xử lý, cán bộ kỹ thuật ghi nhận khảo sát; sau đó Quản trị CSVC lập phương án và trình Ban Giám hiệu phê duyệt nếu cần.
 6. Đánh dấu tài khoản hoạt động (`is_active`). Chỉ bật quyền nhân viên quản trị (`is_staff`) nếu người đó cần đăng nhập Django Admin; người dùng web thông thường không cần quyền này.
 
 Sau khi tạo, dùng `username` và mật khẩu đó để đăng nhập web. Endpoint `/api/v1/users/` chỉ dùng để tra cứu tài khoản trong ứng dụng, không phải endpoint tạo tài khoản.
@@ -204,4 +206,4 @@ Trước khi triển khai ngoài local, cần đặt secret riêng, cấu hình 
 | `GET` | `/api/v1/reports/summary/` | Lấy thống kê báo cáo |
 | `GET` | `/api/v1/reports/export.csv` | Xuất báo cáo CSV |
 
-Các API nghiệp vụ cần JWT. Các bước tiếp nhận, phân công, khảo sát, lập/phê duyệt phương án, sửa chữa, thuê ngoài và nghiệm thu được kiểm tra quyền/trạng thái ở backend. Mã yêu cầu, phương án, công việc thuê ngoài và biên bản được sinh tuần tự (ví dụ `YC-0001`, `PA-0001`, `TN-0001`, `NT-0001`); database dùng UUID làm khóa chính.
+Các API nghiệp vụ cần JWT. Các bước tiếp nhận, phân công, khảo sát, lập/phê duyệt phương án, sửa chữa, thuê ngoài và nghiệm thu được kiểm tra quyền/trạng thái ở backend. Cán bộ kỹ thuật thực hiện khảo sát; Quản trị CSVC lập phương án sau khi khảo sát hoàn tất. Mã yêu cầu, phương án, công việc thuê ngoài và biên bản được sinh tuần tự (ví dụ `YC-0001`, `PA-0001`, `TN-0001`, `NT-0001`); database dùng UUID làm khóa chính.

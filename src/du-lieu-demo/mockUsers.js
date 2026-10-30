@@ -31,7 +31,7 @@ export const MOCK_USERS = [
     phone: '0902345678',
     avatar: null,
     initials: 'QH',
-    roleDescription: 'Tiếp nhận yêu cầu, kiểm tra, phân công cán bộ kỹ thuật và quản lý danh mục CSVC',
+    roleDescription: 'Tiếp nhận yêu cầu, phân công cán bộ kỹ thuật, lập phương án và quản lý danh mục CSVC',
   },
   {
     id: 'U03',
@@ -47,7 +47,7 @@ export const MOCK_USERS = [
     phone: '0903456789',
     avatar: null,
     initials: 'HN',
-    roleDescription: 'Khảo sát hiện trạng, lập phương án, thực hiện sửa chữa nội bộ, nghiệm thu thuê ngoài',
+    roleDescription: 'Khảo sát hiện trạng, thực hiện sửa chữa nội bộ, nghiệm thu thuê ngoài',
   },
   {
     id: 'U04',
@@ -113,4 +113,3 @@ export function getUserByUsername(username) {
 export function getUsersByRole(role) {
   return MOCK_USERS.filter(u => u.role === role);
 }
-
