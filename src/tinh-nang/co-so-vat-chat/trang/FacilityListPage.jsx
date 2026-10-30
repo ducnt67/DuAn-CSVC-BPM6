@@ -26,6 +26,7 @@ export default function FacilityListPage() {
   // Add/Edit modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFacility, setEditingFacility] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -100,30 +101,35 @@ export default function FacilityListPage() {
     setModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!formData.name.trim() || !formData.code.trim()) {
       addToast('Vui lòng nhập mã và tên cơ sở vật chất', 'error');
       return;
     }
 
-    if (editingFacility) {
-      updateFacility(editingFacility.id, {
-        ...formData,
-        updatedAt: new Date().toISOString(),
-      });
-      addToast(`Đã cập nhật cơ sở vật chất ${formData.code}`, 'success');
-    } else {
-      const newFacility = {
-        id: formData.code,
-        ...formData,
-        updatedAt: new Date().toISOString(),
-      };
-      addFacility(newFacility);
-      addToast(`Đã thêm mới cơ sở vật chất ${formData.code}`, 'success');
+    setIsSaving(true);
+    try {
+      const saved = editingFacility
+        ? await updateFacility(editingFacility.id, {
+            ...formData,
+            updatedAt: new Date().toISOString(),
+          })
+        : await addFacility({
+            id: formData.code,
+            ...formData,
+            updatedAt: new Date().toISOString(),
+          });
+      if (!saved) return;
+      addToast(
+        `${editingFacility ? 'Đã cập nhật' : 'Đã thêm mới'} cơ sở vật chất ${formData.code}`,
+        'success'
+      );
+      setModalOpen(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    setModalOpen(false);
   };
 
   // View related requests
@@ -318,7 +324,7 @@ export default function FacilityListPage() {
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
               Hủy
             </Button>
-            <Button variant="primary" onClick={handleSave}>
+            <Button variant="primary" onClick={handleSave} loading={isSaving}>
               {editingFacility ? 'Lưu thay đổi' : 'Thêm mới'}
             </Button>
           </>
@@ -456,4 +462,3 @@ export default function FacilityListPage() {
     </div>
   );
 }
-

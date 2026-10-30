@@ -8,7 +8,6 @@ import {
   CAMPUS_BUILDINGS,
   REQUESTER_TYPES,
 } from '../../../dung-chung/hang-so/commonFacilities';
-import { generateRequestId } from '../../../dung-chung/tien-ich/generateId';
 import {
   ArrowLeft,
   Send,
@@ -172,7 +171,7 @@ export default function RequestCreatePage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) {
       addToast('Vui lòng kiểm tra và điền đầy đủ các thông tin bắt buộc (*)', 'error');
@@ -180,7 +179,6 @@ export default function RequestCreatePage() {
     }
 
     setIsSubmitting(true);
-    const newRequestId = generateRequestId();
     const now = new Date().toISOString();
 
     const facilityName = currentFacility ? currentFacility.name : 'Cơ sở vật chất';
@@ -190,7 +188,6 @@ export default function RequestCreatePage() {
     const autoTitle = cleanDesc.split('\n')[0].slice(0, 90) || `Báo hỏng ${facilityName}`;
 
     const newRequest = {
-      id: newRequestId,
       title: autoTitle,
       facilityId: currentFacility ? `CSVC-${currentFacility.id.toUpperCase()}` : 'CSVC-GEN',
       facilityName: `${facilityName} (${formData.location.trim()})`,
@@ -205,13 +202,8 @@ export default function RequestCreatePage() {
       contactInfo: formData.contactPhone.trim(),
       contactPhone: formData.contactPhone.trim(),
       priority: formData.priority,
-      status: REQUEST_STATUS.NEW,
-      repairType: null,
-      createdAt: now,
       discoveredAt: formData.discoveredAt,
       description: formData.description.trim(),
-      assignedStaffId: null,
-      assignedStaffName: null,
       attachments: attachments.map((a) => a.name),
       timeline: [
         {
@@ -252,8 +244,10 @@ export default function RequestCreatePage() {
       ],
     };
 
-    addRequest(newRequest);
-    addToast(`Đã tạo thành công phiếu yêu cầu ${newRequestId}!`, 'success');
+    const createdRequest = await addRequest(newRequest);
+    setIsSubmitting(false);
+    if (!createdRequest) return;
+    addToast(`Đã tạo thành công phiếu yêu cầu ${createdRequest.id}!`, 'success');
 
     setTimeout(() => {
       navigate('/my-requests');
