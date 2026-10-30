@@ -58,11 +58,18 @@ export default function AppRoutes() {
             <Route path="requests/:id" element={<RequestDetailPage />} />
             <Route
               path="facilities"
-              element={isRequester ? <Navigate to="/my-requests" replace /> : <FacilityListPage />}
+              element={
+                isRequester || isFacilityAdmin ? (
+                  <Navigate to={isFacilityAdmin ? "/requests" : "/my-requests"} replace />
+                ) : (
+                  <FacilityListPage />
+                )
+              }
             />
             <Route path="repair-work" element={<RepairWorkPage />} />
             <Route path="repair-plans" element={<RepairPlanPage />} />
             <Route path="approvals" element={<ApprovalListPage />} />
+            <Route path="approval-results" element={<ApprovalResultsPage />} />
             <Route path="external-work" element={<ExternalWorkPage />} />
             <Route path="acceptance" element={<AcceptancePage />} />
             <Route path="reports" element={<ReportsPage />} />
@@ -71,47 +78,5 @@ export default function AppRoutes() {
         </Routes>
       )}
     </>
-      {/* Main App Layout */}
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<Navigate to={defaultHome} replace />} />
-        <Route
-          path="dashboard"
-          element={
-            isRequester ? (
-              <Navigate to="/my-requests" replace />
-            ) : isFacilityAdmin ? (
-              <Navigate to="/requests" replace />
-            ) : (
-              <DashboardPage />
-            )
-          }
-        />
-        <Route path="my-requests" element={<MyRequestsPage />} />
-        <Route
-          path="requests"
-          element={isRequester ? <Navigate to="/my-requests" replace /> : <RequestListPage />}
-        />
-        <Route path="requests/create" element={<RequestCreatePage />} />
-        <Route path="requests/:id" element={<RequestDetailPage />} />
-        <Route
-          path="facilities"
-          element={
-            isRequester || isFacilityAdmin ? (
-              <Navigate to={isFacilityAdmin ? "/requests" : "/my-requests"} replace />
-            ) : (
-              <FacilityListPage />
-            )
-          }
-        />
-        <Route path="repair-work" element={<RepairWorkPage />} />
-        <Route path="repair-plans" element={<RepairPlanPage />} />
-        <Route path="approvals" element={<ApprovalListPage />} />
-        <Route path="approval-results" element={<ApprovalResultsPage />} />
-        <Route path="external-work" element={<ExternalWorkPage />} />
-        <Route path="acceptance" element={<AcceptancePage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
   );
 }
