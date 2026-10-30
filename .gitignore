@@ -5,3 +5,8 @@ dist
 .env
 .env.*
 !.env.example
+__pycache__/
+*.py[cod]
+backend/.venv/
+backend/db.sqlite3
+backend/staticfiles/

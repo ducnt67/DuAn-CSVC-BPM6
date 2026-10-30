@@ -1,127 +1,318 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { MOCK_USERS } from '../../du-lieu-demo/mockUsers';
-import { MOCK_REQUESTS } from '../../du-lieu-demo/mockRequests';
-import { MOCK_FACILITIES } from '../../du-lieu-demo/mockFacilities';
-import { MOCK_REPAIR_PLANS } from '../../du-lieu-demo/mockRepairPlans';
-import { MOCK_EXTERNAL_WORKS } from '../../du-lieu-demo/mockExternalWorks';
-import { MOCK_NOTIFICATIONS } from '../../du-lieu-demo/mockNotifications';
-import { STORAGE_KEYS } from '../../ha-tang/luu-tru/storageKeys';
-import { hasStorageKey, readStorage, removeStorage, writeStorage } from '../../ha-tang/luu-tru/localStorageAdapter';
-import { authenticateUser, findUserById } from '../../tinh-nang/xac-thuc/dich-vu/authService';
-import { addRequestToList, updateRequestInList } from '../../tinh-nang/yeu-cau-sua-chua/dich-vu/requestService';
-import { addFacilityToList, updateFacilityInList } from '../../tinh-nang/co-so-vat-chat/dich-vu/facilityService';
-import { addRepairPlanToList, updateRepairPlanInList } from '../../tinh-nang/phuong-an-sua-chua/dich-vu/repairPlanService';
-import { addExternalWorkToList, updateExternalWorkInList } from '../../tinh-nang/thue-ngoai/dich-vu/externalWorkService';
+import {
+  getCurrentUser,
+  hasSession,
+  signIn,
+  signOut,
+} from '../../ha-tang/api/apiClient';
+import {
+  createFacility as createBackendFacility,
+  createPendingPlanMap,
+  createRequest as createBackendRequest,
+  loadBackendData,
+  normalizeUser,
+  persistNotificationChanges,
+  persistRequestUpdate,
+  stageExternalWork,
+  stageRepairPlan,
+  updateFacility as updateBackendFacility,
+} from '../../ha-tang/api/backendDataService';
 
 const AppContext = createContext(null);
 
-function getInitialCollection(key, fallback) {
-  return hasStorageKey(STORAGE_KEYS.INITIALIZED) ? readStorage(key, fallback) : fallback;
-}
-
 export function AppProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = readStorage(STORAGE_KEYS.CURRENT_USER, null);
-    if (saved?.id) {
-      const fresh = findUserById(MOCK_USERS, saved.id);
-      return fresh ? { ...saved, ...fresh } : saved;
-    }
-    return saved;
-  });
-  const [requests, setRequests] = useState(() => getInitialCollection(STORAGE_KEYS.REQUESTS, MOCK_REQUESTS));
-  const [facilities, setFacilities] = useState(() => getInitialCollection(STORAGE_KEYS.FACILITIES, MOCK_FACILITIES));
-  const [repairPlans, setRepairPlans] = useState(() => getInitialCollection(STORAGE_KEYS.REPAIR_PLANS, MOCK_REPAIR_PLANS));
-  const [externalWorks, setExternalWorks] = useState(() => getInitialCollection(STORAGE_KEYS.EXTERNAL_WORKS, MOCK_EXTERNAL_WORKS));
-  const [notifications, setNotifications] = useState(() => readStorage(STORAGE_KEYS.NOTIFICATIONS, MOCK_NOTIFICATIONS));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState(MOCK_USERS);
+  const [requests, setRequests] = useState([]);
+  const [facilities, setFacilities] = useState([]);
+  const [repairPlans, setRepairPlans] = useState([]);
+  const [externalWorks, setExternalWorks] = useState([]);
+  const [notifications, setNotificationsState] = useState([]);
   const [toasts, setToasts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const toastIdRef = useRef(0);
-
-  useEffect(() => {
-    if (!hasStorageKey(STORAGE_KEYS.INITIALIZED)) {
-      writeStorage(STORAGE_KEYS.REQUESTS, MOCK_REQUESTS);
-      writeStorage(STORAGE_KEYS.FACILITIES, MOCK_FACILITIES);
-      writeStorage(STORAGE_KEYS.REPAIR_PLANS, MOCK_REPAIR_PLANS);
-      writeStorage(STORAGE_KEYS.EXTERNAL_WORKS, MOCK_EXTERNAL_WORKS);
-      writeStorage(STORAGE_KEYS.NOTIFICATIONS, MOCK_NOTIFICATIONS);
-      writeStorage(STORAGE_KEYS.INITIALIZED, true);
-    }
-  }, []);
-
-  useEffect(() => writeStorage(STORAGE_KEYS.REQUESTS, requests), [requests]);
-  useEffect(() => writeStorage(STORAGE_KEYS.FACILITIES, facilities), [facilities]);
-  useEffect(() => writeStorage(STORAGE_KEYS.REPAIR_PLANS, repairPlans), [repairPlans]);
-  useEffect(() => writeStorage(STORAGE_KEYS.EXTERNAL_WORKS, externalWorks), [externalWorks]);
-  useEffect(() => { if (currentUser) writeStorage(STORAGE_KEYS.CURRENT_USER, currentUser); }, [currentUser]);
+  const activeMutationsRef = useRef(0);
+  const queuedToastsRef = useRef([]);
+  const failedMutationRef = useRef(false);
+  const requestsRef = useRef([]);
+  const facilitiesRef = useRef([]);
+  const notificationsRef = useRef([]);
+  const pendingPlansRef = useRef(createPendingPlanMap());
+  const pendingWorksRef = useRef(new Map());
 
   const addToast = useCallback((message, type = 'success') => {
+    if (type !== 'error' && activeMutationsRef.current > 0) {
+      queuedToastsRef.current.push({ message, type });
+      return;
+    }
     const id = ++toastIdRef.current;
     setToasts((previous) => [...previous, { id, message, type }]);
     setTimeout(() => setToasts((previous) => previous.filter((toast) => toast.id !== id)), 3500);
   }, []);
 
+  const beginMutation = useCallback(() => {
+    activeMutationsRef.current += 1;
+  }, []);
+
+  const finishMutation = useCallback((succeeded) => {
+    if (!succeeded) {
+      failedMutationRef.current = true;
+      queuedToastsRef.current = [];
+    }
+    activeMutationsRef.current -= 1;
+    if (activeMutationsRef.current === 0) {
+      const queuedToasts = failedMutationRef.current ? [] : queuedToastsRef.current;
+      queuedToastsRef.current = [];
+      failedMutationRef.current = false;
+      queuedToasts.forEach(({ message, type }) => addToast(message, type));
+    }
+  }, [addToast]);
+
   const removeToast = useCallback((id) => {
     setToasts((previous) => previous.filter((toast) => toast.id !== id));
   }, []);
 
-  const login = useCallback((username, password) => {
-    const result = authenticateUser(MOCK_USERS, username, password);
-    if (result.success) {
-      setCurrentUser(result.user);
-      writeStorage(STORAGE_KEYS.CURRENT_USER, result.user);
-    }
-    return result;
+  const applySnapshot = useCallback((snapshot) => {
+    requestsRef.current = snapshot.requests;
+    facilitiesRef.current = snapshot.facilities;
+    notificationsRef.current = snapshot.notifications;
+    setUsers(snapshot.users);
+    setRequests(snapshot.requests);
+    setFacilities(snapshot.facilities);
+    setRepairPlans(snapshot.repairPlans);
+    setExternalWorks(snapshot.externalWorks);
+    setNotificationsState(snapshot.notifications);
   }, []);
+
+  const refreshData = useCallback(async () => {
+    const snapshot = await loadBackendData();
+    applySnapshot(snapshot);
+    return snapshot;
+  }, [applySnapshot]);
+
+  useEffect(() => {
+    let active = true;
+    const restoreSession = async () => {
+      const hadSession = hasSession();
+      try {
+        if (hadSession) {
+          const user = await getCurrentUser();
+          const snapshot = await loadBackendData();
+          if (active) {
+            applySnapshot(snapshot);
+            setCurrentUser(normalizeUser(user));
+          }
+        }
+      } catch (error) {
+        signOut();
+        if (hadSession) {
+          addToast(
+            `Không khôi phục được phiên đăng nhập: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+            'error'
+          );
+        }
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+    restoreSession();
+    return () => {
+      active = false;
+    };
+  }, [addToast, applySnapshot]);
+
+  const login = useCallback(async (username, password, rememberMe = true) => {
+    try {
+      const user = await signIn(username, password, rememberMe);
+      const snapshot = await loadBackendData();
+      applySnapshot(snapshot);
+      const normalizedUser = normalizeUser(user);
+      setCurrentUser(normalizedUser);
+      return { success: true, user: normalizedUser };
+    } catch (error) {
+      signOut();
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Không thể kết nối máy chủ.',
+      };
+    }
+  }, [applySnapshot]);
 
   const switchUser = useCallback((userId) => {
-    const user = findUserById(MOCK_USERS, userId);
-    if (user) {
-      setCurrentUser(user);
-      writeStorage(STORAGE_KEYS.CURRENT_USER, user);
+    if (userId !== currentUser?.id) {
+      addToast('Không thể đổi vai trò trực tiếp. Vui lòng đăng xuất và đăng nhập lại.', 'error');
     }
-  }, []);
+  }, [addToast, currentUser]);
 
   const logout = useCallback(() => {
+    signOut();
     setCurrentUser(null);
-    removeStorage(STORAGE_KEYS.CURRENT_USER);
+    requestsRef.current = [];
+    facilitiesRef.current = [];
+    notificationsRef.current = [];
+    pendingPlansRef.current.clear();
+    pendingWorksRef.current.clear();
+    setRequests([]);
+    setFacilities([]);
+    setRepairPlans([]);
+    setExternalWorks([]);
+    setNotificationsState([]);
   }, []);
 
-  const updateRequest = useCallback((id, updates) => {
-    setRequests((previous) => updateRequestInList(previous, id, updates));
+  const updateRequest = useCallback(async (id, updates) => {
+    beginMutation();
+    await Promise.resolve();
+    let succeeded = false;
+    const request = requestsRef.current.find((item) => item.id === id);
+    if (!request) {
+      addToast(`Không tìm thấy yêu cầu ${id} để lưu.`, 'error');
+      finishMutation(false);
+      return false;
+    }
+    try {
+      await persistRequestUpdate(
+        request,
+        updates,
+        pendingPlansRef.current,
+        pendingWorksRef.current
+      );
+      await refreshData();
+      succeeded = true;
+      return true;
+    } catch (error) {
+      addToast(
+        `Không lưu được yêu cầu ${id}: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+        'error'
+      );
+      return false;
+    } finally {
+      finishMutation(succeeded);
+    }
+  }, [addToast, beginMutation, finishMutation, refreshData]);
+
+  const addRequest = useCallback(async (request) => {
+    beginMutation();
+    let succeeded = false;
+    try {
+      const createdRequest = await createBackendRequest(request);
+      await refreshData();
+      succeeded = true;
+      return createdRequest;
+    } catch (error) {
+      addToast(
+        `Không tạo được yêu cầu: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+        'error'
+      );
+      return false;
+    } finally {
+      finishMutation(succeeded);
+    }
+  }, [addToast, beginMutation, finishMutation, refreshData]);
+
+  const updateFacility = useCallback(async (id, updates) => {
+    beginMutation();
+    let succeeded = false;
+    const currentFacility = facilitiesRef.current.find((item) => item.id === id || item.code === id);
+    if (!currentFacility) {
+      addToast(`Không tìm thấy cơ sở vật chất ${id} để lưu.`, 'error');
+      finishMutation(false);
+      return false;
+    }
+    try {
+      await updateBackendFacility({ ...currentFacility, ...updates, id });
+      await refreshData();
+      succeeded = true;
+      return true;
+    } catch (error) {
+      addToast(
+        `Không cập nhật được cơ sở vật chất: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+        'error'
+      );
+      return false;
+    } finally {
+      finishMutation(succeeded);
+    }
+  }, [addToast, beginMutation, finishMutation, refreshData]);
+
+  const addFacility = useCallback(async (facility) => {
+    beginMutation();
+    let succeeded = false;
+    try {
+      await createBackendFacility(facility);
+      await refreshData();
+      succeeded = true;
+      return true;
+    } catch (error) {
+      addToast(
+        `Không thêm được cơ sở vật chất: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+        'error'
+      );
+      return false;
+    } finally {
+      finishMutation(succeeded);
+    }
+  }, [addToast, beginMutation, finishMutation, refreshData]);
+
+  const updateRepairPlan = useCallback(() => {}, []);
+  const addRepairPlan = useCallback((plan) => {
+    stageRepairPlan(pendingPlansRef.current, plan.requestId, plan);
   }, []);
-  const addRequest = useCallback((request) => setRequests((previous) => addRequestToList(previous, request)), []);
-  const updateFacility = useCallback((id, updates) => {
-    setFacilities((previous) => updateFacilityInList(previous, id, updates));
-  }, []);
-  const addFacility = useCallback((facility) => setFacilities((previous) => addFacilityToList(previous, facility)), []);
-  const updateRepairPlan = useCallback((id, updates) => {
-    setRepairPlans((previous) => updateRepairPlanInList(previous, id, updates));
-  }, []);
-  const addRepairPlan = useCallback((plan) => setRepairPlans((previous) => addRepairPlanToList(previous, plan)), []);
+
   const updateExternalWork = useCallback((id, updates) => {
-    setExternalWorks((previous) => updateExternalWorkInList(previous, id, updates));
-  }, []);
-  const addExternalWork = useCallback((work) => setExternalWorks((previous) => addExternalWorkToList(previous, work)), []);
+    const work = externalWorks.find((item) => item.id === id);
+    if (!work) {
+      addToast(`Không tìm thấy công việc thuê ngoài ${id}.`, 'error');
+      return false;
+    }
+    stageExternalWork(pendingWorksRef.current, work.requestId, { ...work, ...updates });
+    return true;
+  }, [addToast, externalWorks]);
 
-  const resetDemoData = useCallback(() => {
-    setRequests(MOCK_REQUESTS);
-    setFacilities(MOCK_FACILITIES);
-    setRepairPlans(MOCK_REPAIR_PLANS);
-    setExternalWorks(MOCK_EXTERNAL_WORKS);
-    setNotifications(MOCK_NOTIFICATIONS);
-    writeStorage(STORAGE_KEYS.REQUESTS, MOCK_REQUESTS);
-    writeStorage(STORAGE_KEYS.FACILITIES, MOCK_FACILITIES);
-    writeStorage(STORAGE_KEYS.REPAIR_PLANS, MOCK_REPAIR_PLANS);
-    writeStorage(STORAGE_KEYS.EXTERNAL_WORKS, MOCK_EXTERNAL_WORKS);
-    writeStorage(STORAGE_KEYS.NOTIFICATIONS, MOCK_NOTIFICATIONS);
-    addToast('Đã khôi phục dữ liệu demo thành công', 'success');
-  }, [addToast]);
+  const addExternalWork = useCallback((work) => {
+    const existing = externalWorks.find((item) => item.requestId === work.requestId);
+    if (existing) {
+      stageExternalWork(pendingWorksRef.current, work.requestId, { ...existing, ...work });
+    }
+  }, [externalWorks]);
+
+  const setNotifications = useCallback((updater) => {
+    const previous = notificationsRef.current;
+    const next = typeof updater === 'function' ? updater(previous) : updater;
+    const visibleNext = next.filter((item) => previous.some((old) => old.id === item.id));
+    notificationsRef.current = visibleNext;
+    setNotificationsState(visibleNext);
+
+    persistNotificationChanges(previous, next)
+      .then(() => refreshData())
+      .catch((error) => {
+        notificationsRef.current = previous;
+        setNotificationsState(previous);
+        addToast(
+          `Không cập nhật được thông báo: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+          'error'
+        );
+      });
+  }, [addToast, refreshData]);
+
+  const resetDemoData = useCallback(async () => {
+    try {
+      await refreshData();
+      addToast('Đã tải lại dữ liệu mới nhất từ máy chủ.', 'success');
+    } catch (error) {
+      addToast(
+        `Không tải lại được dữ liệu: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+        'error'
+      );
+    }
+  }, [addToast, refreshData]);
 
   const value = {
-    currentUser, login, switchUser, logout,
+    currentUser, login, switchUser, logout, isLoading,
     requests, facilities, repairPlans, externalWorks, notifications, setNotifications,
     updateRequest, addRequest, updateFacility, addFacility,
     updateRepairPlan, addRepairPlan, updateExternalWork, addExternalWork,
-    resetDemoData, toasts, addToast, removeToast, users: MOCK_USERS,
+    resetDemoData, toasts, addToast, removeToast, users,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

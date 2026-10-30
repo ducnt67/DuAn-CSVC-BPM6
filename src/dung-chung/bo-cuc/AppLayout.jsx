@@ -4,7 +4,6 @@ import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Footer from './Footer';
-import Toast from '../thanh-phan/Toast';
 import '../styles/layout.css';
 
 export default function AppLayout() {
@@ -42,7 +41,6 @@ export default function AppLayout() {
         <Footer />
       </div>
 
-      <Toast />
     </div>
   );
 }

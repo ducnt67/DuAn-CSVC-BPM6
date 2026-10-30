@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '../../dung-chung/bo-cuc/AppLayout';
+import Toast from '../../dung-chung/thanh-phan/Toast';
 
 import LoginPage from '../../tinh-nang/xac-thuc/trang/LoginPage';
 import DashboardPage from '../../tinh-nang/bang-dieu-khien/trang/DashboardPage';
@@ -18,44 +19,49 @@ import NotFoundPage from './NotFoundPage';
 
 import { useApp } from '../bo-cung-cap/AppContext';
 import { ROLES } from '../../dung-chung/hang-so/roles';
+import LoadingState from '../../dung-chung/thanh-phan/LoadingState';
 
 export default function AppRoutes() {
-  const { currentUser } = useApp();
+  const { currentUser, isLoading } = useApp();
   const isRequester = currentUser?.role === ROLES.REQUESTER;
   const defaultHome = isRequester ? '/my-requests' : '/dashboard';
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <Toast />
+      {isLoading ? (
+        <LoadingState message="Đang kết nối máy chủ..." />
+      ) : (
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
 
-      {/* Main App Layout */}
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<Navigate to={defaultHome} replace />} />
-        <Route
-          path="dashboard"
-          element={isRequester ? <Navigate to="/my-requests" replace /> : <DashboardPage />}
-        />
-        <Route path="my-requests" element={<MyRequestsPage />} />
-        <Route
-          path="requests"
-          element={isRequester ? <Navigate to="/my-requests" replace /> : <RequestListPage />}
-        />
-        <Route path="requests/create" element={<RequestCreatePage />} />
-        <Route path="requests/:id" element={<RequestDetailPage />} />
-        <Route
-          path="facilities"
-          element={isRequester ? <Navigate to="/my-requests" replace /> : <FacilityListPage />}
-        />
-        <Route path="repair-work" element={<RepairWorkPage />} />
-        <Route path="repair-plans" element={<RepairPlanPage />} />
-        <Route path="approvals" element={<ApprovalListPage />} />
-        <Route path="external-work" element={<ExternalWorkPage />} />
-        <Route path="acceptance" element={<AcceptancePage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Route>
-    </Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<Navigate to={defaultHome} replace />} />
+            <Route
+              path="dashboard"
+              element={isRequester ? <Navigate to="/my-requests" replace /> : <DashboardPage />}
+            />
+            <Route path="my-requests" element={<MyRequestsPage />} />
+            <Route
+              path="requests"
+              element={isRequester ? <Navigate to="/my-requests" replace /> : <RequestListPage />}
+            />
+            <Route path="requests/create" element={<RequestCreatePage />} />
+            <Route path="requests/:id" element={<RequestDetailPage />} />
+            <Route
+              path="facilities"
+              element={isRequester ? <Navigate to="/my-requests" replace /> : <FacilityListPage />}
+            />
+            <Route path="repair-work" element={<RepairWorkPage />} />
+            <Route path="repair-plans" element={<RepairPlanPage />} />
+            <Route path="approvals" element={<ApprovalListPage />} />
+            <Route path="external-work" element={<ExternalWorkPage />} />
+            <Route path="acceptance" element={<AcceptancePage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      )}
+    </>
   );
 }
-
-

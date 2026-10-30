@@ -10,46 +10,50 @@ import Button from '../../../dung-chung/thanh-phan/Button';
 import UniversityLogo from '../../../dung-chung/thanh-phan/UniversityLogo';
 import Footer from '../../../dung-chung/bo-cuc/Footer';
 
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || '123';
+
 export default function LoginPage() {
   const { users, login, addToast } = useApp();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState('nmanh');
-  const [password, setPassword] = useState('123');
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
     setLoading(true);
 
-    setTimeout(() => {
-      const result = login(username, password);
-      setLoading(false);
+    const result = await login(username, password, rememberMe);
+    setLoading(false);
 
-      if (result.success) {
-        addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
-        navigate('/dashboard');
-      } else {
-        setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
-      }
-    }, 250);
+    if (result.success) {
+      addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
+      navigate('/dashboard');
+    } else {
+      setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+    }
   };
 
   // Helper to prefill demo credentials
-  const handleSelectDemoAccount = (user, autoLogin = false) => {
+  const handleSelectDemoAccount = async (user, autoLogin = false) => {
     setUsername(user.username);
-    setPassword(user.password);
+    setPassword(DEMO_PASSWORD);
     setErrorMessage('');
 
     if (autoLogin) {
-      const result = login(user.username, user.password);
+      setLoading(true);
+      const result = await login(user.username, DEMO_PASSWORD, rememberMe);
+      setLoading(false);
       if (result.success) {
         addToast(`Đăng nhập thành công với vai trò ${ROLE_LABELS[user.role]}`, 'success');
         navigate('/dashboard');
+      } else {
+        setErrorMessage(result.message || 'Không thể đăng nhập bằng tài khoản demo.');
       }
     } else {
       addToast(`Đã điền thông tin tài khoản: ${user.name} (${user.username})`, 'info');
@@ -445,7 +449,7 @@ export default function LoginPage() {
                   Danh sách tài khoản demo
                 </span>
                 <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-tertiary)' }}>
-                  Mật khẩu chung: <strong>123</strong>
+                  Mật khẩu chung: <strong>{DEMO_PASSWORD}</strong>
                 </span>
               </div>
 
@@ -532,4 +536,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

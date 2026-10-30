@@ -2,7 +2,9 @@
 
 Ứng dụng frontend mô phỏng quản lý quy trình sửa chữa cơ sở vật chất (Facility Management & Business Process Management) dành cho **Trường Đại học Kinh tế – Đại học Đà Nẵng (DUE)**.
 
-Ứng dụng mô phỏng quy trình từ tiếp nhận yêu cầu, khảo sát, lập phương án và dự toán, phê duyệt khi cần, đến sửa chữa nội bộ hoặc thuê ngoài, nghiệm thu và xác nhận hoàn thành. Dữ liệu và xác thực hiện chạy ở phía trình duyệt, chưa kết nối backend.
+Ứng dụng quản lý quy trình từ tiếp nhận yêu cầu, khảo sát, lập phương án và dự toán, phê duyệt khi cần, đến sửa chữa nội bộ hoặc thuê ngoài, nghiệm thu và xác nhận hoàn thành. Dữ liệu nghiệp vụ và xác thực được xử lý qua Django REST API; SQLite là cơ sở dữ liệu mặc định khi phát triển local.
+
+> **Backend Django:** Hướng dẫn khởi chạy, tạo dữ liệu mẫu, tài khoản demo, API và các ràng buộc workflow nằm trong [backend/README.md](./backend/README.md). `localStorage`/`sessionStorage` chỉ giữ JWT đăng nhập theo lựa chọn ghi nhớ; dữ liệu nghiệp vụ được lưu trong database phía backend.
 
 ---
 
@@ -13,7 +15,7 @@
 - **Biểu đồ thống kê**: Recharts (PieChart, BarChart trực quan).
 - **Icons**: Lucide React.
 - **Xử lý ngày tháng & tiền tệ**: `date-fns` (Vietnamese Locale), `Intl.NumberFormat` (VND).
-- **Lưu trữ dữ liệu**: `localStorage` trên trình duyệt; dữ liệu mẫu được nạp lần đầu và thay đổi được lưu để còn sau khi tải lại cùng trình duyệt.
+- **Lưu trữ dữ liệu**: Database Django; trình duyệt chỉ giữ JWT đăng nhập trong `localStorage` hoặc `sessionStorage`.
 - **Giao diện**: CSS thuần (CSS Custom Properties) tuân thủ bảng màu nhận diện DUE E-Study:
   - Màu cam (`#F58220`): Nút hành động chính, điểm nhấn tương tác.
   - Màu xanh dương (`#1677C8`): Sidebar, liên kết, trạng thái tiến trình.
@@ -107,12 +109,12 @@ src/
 │   └── bao-cao/
 ├── dung-chung/      # Component, layout, hook, tiện ích và hằng số dùng chung
 ├── du-lieu-demo/    # Dữ liệu mô phỏng phục vụ trình diễn frontend
-└── ha-tang/         # Adapter localStorage và lớp tích hợp API tương lai
+└── ha-tang/         # Client REST API và tiện ích hạ tầng
 ```
 
-Mỗi module trong `tinh-nang/` được tổ chức theo màn hình (`trang/`). Các component dùng chung không thuộc riêng nghiệp vụ nào được đặt trong `dung-chung/`. Dữ liệu demo được tách khỏi mã nguồn nghiệp vụ để sau này có thể thay bằng API mà không phải thay đổi cấu trúc giao diện.
+Mỗi module trong `tinh-nang/` được tổ chức theo màn hình (`trang/`). Các component dùng chung không thuộc riêng nghiệp vụ nào được đặt trong `dung-chung/`. Dữ liệu khởi tạo được cung cấp bởi lệnh seed của Django; frontend tải và lưu các thay đổi nghiệp vụ qua adapter REST API trong `ha-tang/api/`.
 
-Một số thao tác cập nhật danh sách được tách thành service trong module nghiệp vụ; luồng nghiệp vụ hiện được phối hợp giữa các màn hình và `AppContext`, nơi cung cấp state qua `useApp()`. Việc đọc/ghi `localStorage` được cô lập trong `ha-tang/luu-tru`; đây là nền tảng để có thể tích hợp REST API ở giai đoạn sau, hiện chưa có backend.
+Luồng nghiệp vụ hiện được phối hợp giữa các màn hình và `AppContext`, nơi cung cấp state qua `useApp()`. `AppContext` khởi tạo dữ liệu từ backend và các thao tác tạo/cập nhật/xóa được gửi đến API; lỗi từ server được hiển thị trong giao diện.
 
 ## 6. Hướng dẫn cài đặt và chạy ứng dụng
 
@@ -127,19 +129,31 @@ Một số thao tác cập nhật danh sách được tách thành service trong
 npm install
 ```
 
-2. Khởi chạy môi trường phát triển (Dev Server):
+2. Khởi chạy Django backend trong một cửa sổ PowerShell riêng:
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_demo
+python manage.py runserver
+```
+Nếu đã cài đặt backend trước đó, chỉ cần chạy `python manage.py runserver`. Database SQLite mặc định nằm tại `backend/db.sqlite3`; tài khoản mẫu và cách kiểm tra API được mô tả trong [backend/README.md](./backend/README.md).
+
+3. Khởi chạy frontend trong cửa sổ terminal khác:
 ```bash
 npm run dev
 ```
 Trình duyệt sẽ mở tại: `http://localhost:5173/` (hoặc cổng hiển thị trên console).
 
-3. Xây dựng bản phát hành sản phẩm (Production Build):
+4. Xây dựng bản phát hành sản phẩm (Production Build):
 ```bash
 npm run build
 ```
 Bản dựng tối ưu được tạo ra trong thư mục `dist/`.
 
-4. Xem trước bản dựng production:
+5. Xem trước bản dựng production:
 ```bash
 npm run preview
 ```
