@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
-import { ROLE_LABELS } from '../../../dung-chung/hang-so/roles';
+import { ROLES, ROLE_LABELS } from '../../../dung-chung/hang-so/roles';
 import {
   Lock, User, Eye, EyeOff, LogIn,
   ShieldCheck, Phone, Mail, CheckCircle, ArrowRight, Info
@@ -37,6 +37,14 @@ export default function LoginPage() {
     } else {
       setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
     }
+      if (result.success) {
+        addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
+        const targetPath = result.user.role === ROLES.REQUESTER ? '/my-requests' : result.user.role === ROLES.FACILITY_ADMIN ? '/requests' : '/dashboard';
+        navigate(targetPath);
+      } else {
+        setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
+      }
+    }, 250);
   };
 
   // Helper to prefill demo credentials
@@ -54,6 +62,8 @@ export default function LoginPage() {
         navigate('/dashboard');
       } else {
         setErrorMessage(result.message || 'Không thể đăng nhập bằng tài khoản demo.');
+        const targetPath = user.role === ROLES.REQUESTER ? '/my-requests' : user.role === ROLES.FACILITY_ADMIN ? '/requests' : '/dashboard';
+        navigate(targetPath);
       }
     } else {
       addToast(`Đã điền thông tin tài khoản: ${user.name} (${user.username})`, 'info');
