@@ -164,5 +164,27 @@ export const MOCK_REPAIR_PLANS = [
       { date: '2026-10-25T14:00:00Z', action: 'Phê duyệt', actor: 'Nguyễn Thị Thu Hà', comments: 'Đồng ý. Ưu tiên xử lý nhanh.' },
     ],
   },
+  {
+    id: 'PA-0009',
+    requestId: 'YC-0005',
+    title: 'Thay toàn bộ cửa gỗ phòng học A302',
+    repairType: 'EXTERNAL',
+    description: 'Đề xuất thay mới toàn bộ khung bao và cánh cửa gỗ lim phòng A302',
+    estimatedCost: 18500000,
+    estimatedTime: '12 ngày',
+    createdBy: 'U03',
+    createdByName: 'Lê Hoàng Nam',
+    createdAt: '2026-10-23T10:00:00Z',
+    needsApproval: true,
+    approvalStatus: APPROVAL_STATUS.REJECTED,
+    approvedBy: 'U04',
+    approvedByName: 'Nguyễn Thị Thu Hà',
+    approvedAt: '2026-10-24T08:30:00Z',
+    rejectionReason: 'Kinh phí thay mới vượt dự toán năm. Yêu cầu chỉ sửa chữa bản lề và ổ khóa hư hỏng.',
+    approvalHistory: [
+      { date: '2026-10-23T10:30:00Z', action: 'Gửi phê duyệt', actor: 'Lê Hoàng Nam' },
+      { date: '2026-10-24T08:30:00Z', action: 'Từ chối', actor: 'Nguyễn Thị Thu Hà', comments: 'Kinh phí thay mới vượt dự toán năm. Yêu cầu chỉ sửa chữa bản lề và ổ khóa hư hỏng.' },
+    ],
+  },
 ];
 

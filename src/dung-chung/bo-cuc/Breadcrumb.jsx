@@ -16,18 +16,34 @@ const ROUTE_LABELS = {
   acceptance: 'Nghiệm thu',
   facilities: 'Cơ sở vật chất',
   reports: 'Báo cáo & Thống kê',
+  'approval-results': 'Kết quả phê duyệt BGH',
 };
 
 export default function Breadcrumb({ isLight = false }) {
   const location = useLocation();
   const { currentUser } = useApp();
   const isRequester = currentUser?.role === ROLES.REQUESTER;
-  const homePath = isRequester ? '/my-requests' : '/dashboard';
-  const homeLabel = isRequester ? 'Yêu cầu của tôi' : 'Bảng điều khiển';
+  const isFacilityAdmin = currentUser?.role === ROLES.FACILITY_ADMIN;
+
+  let homePath = '/dashboard';
+  let homeLabel = 'Bảng điều khiển';
+  if (isRequester) {
+    homePath = '/my-requests';
+    homeLabel = 'Yêu cầu của tôi';
+  } else if (isFacilityAdmin) {
+    homePath = '/requests';
+    homeLabel = 'Danh sách yêu cầu';
+  }
 
   const pathnames = location.pathname.split('/').filter((x) => x);
 
-  if (pathnames.length === 0 || (pathnames[0] === 'dashboard' && !isRequester) || (pathnames[0] === 'my-requests' && isRequester)) {
+  const isHomeView =
+    pathnames.length === 0 ||
+    (pathnames[0] === 'dashboard' && !isRequester && !isFacilityAdmin) ||
+    (pathnames[0] === 'my-requests' && isRequester) ||
+    (pathnames[0] === 'requests' && isFacilityAdmin && pathnames.length === 1);
+
+  if (isHomeView) {
     return (
       <div className={`due-breadcrumb ${isLight ? 'breadcrumb-dark-text' : 'breadcrumb-light-text'}`}>
         <Home size={15} />

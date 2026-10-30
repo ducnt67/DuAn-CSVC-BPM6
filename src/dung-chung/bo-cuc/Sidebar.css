@@ -107,7 +107,7 @@
 .sidebar-group-menu {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
   margin-top: 2px;
 }
 
