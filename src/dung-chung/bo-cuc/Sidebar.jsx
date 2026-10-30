@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import { NAVIGATION } from '../hang-so/navigation';
-import { ROLE_LABELS } from '../hang-so/roles';
-import { REQUEST_STATUS } from '../hang-so/statuses';
+import { ROLES, ROLE_LABELS } from '../hang-so/roles';
+import { REQUEST_STATUS, APPROVAL_STATUS } from '../hang-so/statuses';
 import {
   ChevronDown, X, Phone, Mail,
   Sliders, Shield, UserCheck, ChevronRight
@@ -11,11 +11,20 @@ import {
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
-  const { currentUser, requests } = useApp();
+  const { currentUser, requests, repairPlans } = useApp();
   const userRole = currentUser?.role;
 
   // Filter navigation groups and items by user role
   const visibleGroups = useMemo(() => {
+    // Với Quản trị CSVC, gom toàn bộ mục vào 1 danh sách duy nhất không phân nhóm
+    // để khoảng cách giữa các mục menu (Danh sách YC, Kết quả phê duyệt, Báo cáo) hoàn toàn đồng đều
+    if (userRole === ROLES.FACILITY_ADMIN) {
+      const allAdminItems = NAVIGATION.flatMap((g) => g.items).filter(
+        (item) => item.roles && item.roles.includes(userRole)
+      );
+      return [{ group: 'Chức năng', hideHeader: true, items: allAdminItems }];
+    }
+
     return NAVIGATION.map((group) => {
       const visibleItems = group.items.filter(
         (item) => !userRole || (item.roles && item.roles.includes(userRole))
@@ -76,8 +85,14 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
     ).length;
     if (acceptCount > 0) badges['acceptance'] = { count: acceptCount, type: 'success' };
 
+    // 7. Approval results for Admin (pending BGH review)
+    if (userRole === ROLES.FACILITY_ADMIN && repairPlans) {
+      const pendingApprovalCount = repairPlans.filter(p => p.approvalStatus === APPROVAL_STATUS.PENDING).length;
+      if (pendingApprovalCount > 0) badges['approval-results'] = { count: pendingApprovalCount, type: 'warning' };
+    }
+
     return badges;
-  }, [requests, currentUser]);
+  }, [requests, currentUser, repairPlans, userRole]);
 
   const initials = currentUser?.name
     ? currentUser.name
