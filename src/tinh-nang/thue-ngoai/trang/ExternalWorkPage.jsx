@@ -14,6 +14,7 @@ import Input from '../../../dung-chung/thanh-phan/Input';
 import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
 import { formatCurrency } from '../../../dung-chung/tien-ich/formatCurrency';
+import { getEffectiveExternalWorkStatus } from '../dich-vu/externalWorkService';
 
 export default function ExternalWorkPage() {
   const { externalWorks, updateExternalWork, requests, updateRequest, currentUser, addToast } = useApp();
@@ -42,7 +43,7 @@ export default function ExternalWorkPage() {
           return false;
         }
       }
-      if (statusFilter && w.status !== statusFilter) return false;
+      if (statusFilter && getEffectiveExternalWorkStatus(w) !== statusFilter) return false;
       return true;
     });
   }, [externalWorks, search, statusFilter]);
@@ -198,16 +199,20 @@ export default function ExternalWorkPage() {
     {
       title: 'Trạng thái',
       field: 'status',
-      render: (val) => {
+      render: (val, row) => {
+        const displayStatus = getEffectiveExternalWorkStatus(row);
         let color = '#D97B0D';
         let bg = '#FFF1E5';
-        if (val === 'COMPLETED') {
+        if (displayStatus === 'COMPLETED') {
           color = '#229A58';
           bg = '#E9F8EF';
-        } else if (val === 'NEEDS_REMEDIATION') {
+        } else if (displayStatus === 'NEEDS_REMEDIATION') {
           color = '#D64545';
           bg = '#FFF0F0';
-        } else if (val === 'IN_PROGRESS') {
+        } else if (displayStatus === 'OVERDUE') {
+          color = '#D64545';
+          bg = '#FFF0F0';
+        } else if (displayStatus === 'IN_PROGRESS') {
           color = '#1677C8';
           bg = '#EAF4FF';
         }
@@ -223,7 +228,7 @@ export default function ExternalWorkPage() {
               backgroundColor: bg,
             }}
           >
-            {EXTERNAL_WORK_STATUS_LABELS[val] || val}
+            {EXTERNAL_WORK_STATUS_LABELS[displayStatus] || val}
           </span>
         );
       },
@@ -297,6 +302,7 @@ export default function ExternalWorkPage() {
           <option value="">-- Tất cả trạng thái --</option>
           <option value="PENDING">Chờ tiếp nhận</option>
           <option value="IN_PROGRESS">Đang thực hiện</option>
+          <option value="OVERDUE">Đã quá hạn</option>
           <option value="WAITING_ACCEPTANCE">Chờ nghiệm thu</option>
           <option value="NEEDS_REMEDIATION">Cần khắc phục</option>
           <option value="COMPLETED">Hoàn thành</option>
@@ -384,4 +390,3 @@ export default function ExternalWorkPage() {
     </div>
   );
 }
-
