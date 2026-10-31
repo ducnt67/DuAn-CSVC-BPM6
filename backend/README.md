@@ -8,14 +8,16 @@ Backend cung cấp REST API cho frontend React. Dữ liệu nghiệp vụ đư�
 
 Cần có:
 
-- Windows và PowerShell.
-- Python 3.10 trở lên.
-- Node.js và npm để chạy frontend.
+- Windows và PowerShell (hoặc Terminal tích hợp trong IDE).
+- **Python 3.10 trở lên**.
+- **PyCharm** (khuyến nghị dùng PyCharm Community hoặc Professional để mở thư mục `backend`, chạy server và quản lý cơ sở dữ liệu dễ dàng).
+- **SQLite** (sẵn có trong Python, không cần cài server database; file `backend\db.sqlite3` được tạo tự động sau khi chạy lệnh `migrate`).
+- **Node.js** và **npm** để chạy frontend React.
 
-Mở PowerShell tại thư mục dự án. Vào thư mục backend:
+Mở PyCharm tại thư mục `backend` (hoặc mở PowerShell tại thư mục dự án rồi vào thư mục `backend`):
 
 ```powershell
-cd D:\HocTap\DuAn-CSVC-BPM6\backend
+cd backend
 ```
 
 Tạo môi trường Python và cài thư viện (chỉ cần làm lần đầu):
@@ -25,7 +27,7 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-> Hãy chạy các lệnh Django bằng `.\.venv\Scripts\python.exe`. Cách này bảo đảm dùng đúng Python đã cài Django trong `backend\.venv`, tránh nhầm với môi trường `.venv` của thư mục dự án hoặc Python khác trên máy.
+> Hãy chạy các lệnh Django bằng `.\.venv\Scripts\python.exe` (hoặc cấu hình Python Interpreter trong PyCharm trỏ tới `.venv`). Cách này bảo đảm dùng đúng Python đã cài Django trong `backend\.venv`, tránh nhầm với môi trường khác trên máy.
 
 ## 2. Tạo database và dữ liệu demo
 

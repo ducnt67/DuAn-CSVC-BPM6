@@ -33,18 +33,16 @@ export default function LoginPage() {
 
     if (result.success) {
       addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
-      navigate('/dashboard');
+      const targetPath =
+        result.user.role === ROLES.REQUESTER
+          ? '/my-requests'
+          : result.user.role === ROLES.FACILITY_ADMIN
+          ? '/requests'
+          : '/dashboard';
+      navigate(targetPath);
     } else {
       setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
     }
-      if (result.success) {
-        addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
-        const targetPath = result.user.role === ROLES.REQUESTER ? '/my-requests' : result.user.role === ROLES.FACILITY_ADMIN ? '/requests' : '/dashboard';
-        navigate(targetPath);
-      } else {
-        setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
-      }
-    }, 250);
   };
 
   // Helper to prefill demo credentials
@@ -59,11 +57,15 @@ export default function LoginPage() {
       setLoading(false);
       if (result.success) {
         addToast(`Đăng nhập thành công với vai trò ${ROLE_LABELS[user.role]}`, 'success');
-        navigate('/dashboard');
+        const targetPath =
+          user.role === ROLES.REQUESTER
+            ? '/my-requests'
+            : user.role === ROLES.FACILITY_ADMIN
+            ? '/requests'
+            : '/dashboard';
+        navigate(targetPath);
       } else {
         setErrorMessage(result.message || 'Không thể đăng nhập bằng tài khoản demo.');
-        const targetPath = user.role === ROLES.REQUESTER ? '/my-requests' : user.role === ROLES.FACILITY_ADMIN ? '/requests' : '/dashboard';
-        navigate(targetPath);
       }
     } else {
       addToast(`Đã điền thông tin tài khoản: ${user.name} (${user.username})`, 'info');
