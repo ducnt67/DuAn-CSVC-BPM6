@@ -8,5 +8,9 @@ dist
 __pycache__/
 *.py[cod]
 backend/.venv/
+*.sqlite3
+*.sqlite
+*.db
 backend/db.sqlite3
 backend/staticfiles/
+.idea/
