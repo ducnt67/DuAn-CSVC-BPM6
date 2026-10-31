@@ -22,7 +22,8 @@ import { ROLES } from '../../dung-chung/hang-so/roles';
 export default function AppRoutes() {
   const { currentUser } = useApp();
   const isRequester = currentUser?.role === ROLES.REQUESTER;
-  const defaultHome = isRequester ? '/my-requests' : '/dashboard';
+  const isStaff = currentUser?.role === ROLES.STAFF;
+  const defaultHome = isRequester ? '/my-requests' : isStaff ? '/repair-plans' : '/dashboard';
 
   return (
     <Routes>
@@ -33,7 +34,13 @@ export default function AppRoutes() {
         <Route index element={<Navigate to={defaultHome} replace />} />
         <Route
           path="dashboard"
-          element={isRequester ? <Navigate to="/my-requests" replace /> : <DashboardPage />}
+          element={
+            isRequester
+              ? <Navigate to="/my-requests" replace />
+              : isStaff
+                ? <Navigate to="/repair-plans" replace />
+                : <DashboardPage />
+          }
         />
         <Route path="my-requests" element={<MyRequestsPage />} />
         <Route
@@ -57,5 +64,3 @@ export default function AppRoutes() {
     </Routes>
   );
 }
-
-

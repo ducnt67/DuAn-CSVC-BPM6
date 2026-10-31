@@ -22,12 +22,22 @@ export default function Breadcrumb({ isLight = false }) {
   const location = useLocation();
   const { currentUser } = useApp();
   const isRequester = currentUser?.role === ROLES.REQUESTER;
-  const homePath = isRequester ? '/my-requests' : '/dashboard';
-  const homeLabel = isRequester ? 'Yêu cầu của tôi' : 'Bảng điều khiển';
+  const isStaff = currentUser?.role === ROLES.STAFF;
+  const homePath = isRequester ? '/my-requests' : isStaff ? '/repair-plans' : '/dashboard';
+  const homeLabel = isRequester
+    ? 'Yêu cầu của tôi'
+    : isStaff
+      ? 'Phương án sửa chữa'
+      : 'Bảng điều khiển';
 
   const pathnames = location.pathname.split('/').filter((x) => x);
 
-  if (pathnames.length === 0 || (pathnames[0] === 'dashboard' && !isRequester) || (pathnames[0] === 'my-requests' && isRequester)) {
+  if (
+    pathnames.length === 0 ||
+    (pathnames[0] === 'dashboard' && !isRequester && !isStaff) ||
+    (pathnames[0] === 'my-requests' && isRequester) ||
+    (pathnames[0] === 'repair-plans' && isStaff)
+  ) {
     return (
       <div className={`due-breadcrumb ${isLight ? 'breadcrumb-dark-text' : 'breadcrumb-light-text'}`}>
         <Home size={15} />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
-import { ROLE_LABELS } from '../../../dung-chung/hang-so/roles';
+import { ROLE_LABELS, ROLES } from '../../../dung-chung/hang-so/roles';
 import {
   Lock, User, Eye, EyeOff, LogIn,
   ShieldCheck, Phone, Mail, CheckCircle, ArrowRight, Info
@@ -32,7 +32,7 @@ export default function LoginPage() {
 
       if (result.success) {
         addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
-        navigate('/dashboard');
+        navigate(result.user.role === ROLES.STAFF ? '/repair-plans' : '/dashboard');
       } else {
         setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
       }
@@ -49,7 +49,7 @@ export default function LoginPage() {
       const result = login(user.username, user.password);
       if (result.success) {
         addToast(`Đăng nhập thành công với vai trò ${ROLE_LABELS[user.role]}`, 'success');
-        navigate('/dashboard');
+        navigate(user.role === ROLES.STAFF ? '/repair-plans' : '/dashboard');
       }
     } else {
       addToast(`Đã điền thông tin tài khoản: ${user.name} (${user.username})`, 'info');
@@ -532,4 +532,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

@@ -15,7 +15,7 @@ export const NAVIGATION = [
         label: 'Tổng quan',
         path: '/dashboard',
         icon: LayoutDashboard,
-        roles: [ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.DIRECTOR, ROLES.PROCUREMENT],
+        roles: [ROLES.FACILITY_ADMIN, ROLES.DIRECTOR, ROLES.PROCUREMENT],
       },
     ],
   },
@@ -60,7 +60,7 @@ export const NAVIGATION = [
         label: 'Phương án sửa chữa',
         path: '/repair-plans',
         icon: ClipboardList,
-        roles: [ROLES.STAFF],
+        roles: [ROLES.FACILITY_ADMIN, ROLES.STAFF],
       },
       {
         key: 'approvals',
@@ -105,4 +105,3 @@ export const NAVIGATION = [
     ],
   },
 ];
-
