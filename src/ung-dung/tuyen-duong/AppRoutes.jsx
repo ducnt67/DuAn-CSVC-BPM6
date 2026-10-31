@@ -26,12 +26,15 @@ export default function AppRoutes() {
   const { currentUser, isLoading } = useApp();
   const isRequester = currentUser?.role === ROLES.REQUESTER;
   const isFacilityAdmin = currentUser?.role === ROLES.FACILITY_ADMIN;
+  const isStaff = currentUser?.role === ROLES.STAFF;
 
   let defaultHome = '/dashboard';
   if (isRequester) {
     defaultHome = '/my-requests';
   } else if (isFacilityAdmin) {
     defaultHome = '/requests';
+  } else if (isStaff) {
+    defaultHome = '/repair-plans';
   }
 
   return (
@@ -53,6 +56,8 @@ export default function AppRoutes() {
                   <Navigate to="/my-requests" replace />
                 ) : isFacilityAdmin ? (
                   <Navigate to="/requests" replace />
+                ) : isStaff ? (
+                  <Navigate to="/repair-plans" replace />
                 ) : (
                   <DashboardPage />
                 )

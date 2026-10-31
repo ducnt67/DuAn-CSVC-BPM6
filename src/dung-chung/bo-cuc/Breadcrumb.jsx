@@ -24,6 +24,7 @@ export default function Breadcrumb({ isLight = false }) {
   const { currentUser } = useApp();
   const isRequester = currentUser?.role === ROLES.REQUESTER;
   const isFacilityAdmin = currentUser?.role === ROLES.FACILITY_ADMIN;
+  const isStaff = currentUser?.role === ROLES.STAFF;
 
   let homePath = '/dashboard';
   let homeLabel = 'Bảng điều khiển';
@@ -33,6 +34,9 @@ export default function Breadcrumb({ isLight = false }) {
   } else if (isFacilityAdmin) {
     homePath = '/requests';
     homeLabel = 'Danh sách yêu cầu';
+  } else if (isStaff) {
+    homePath = '/repair-plans';
+    homeLabel = 'Phương án sửa chữa';
   }
 
   const pathnames = location.pathname.split('/').filter((x) => x);
@@ -41,7 +45,8 @@ export default function Breadcrumb({ isLight = false }) {
     pathnames.length === 0 ||
     (pathnames[0] === 'dashboard' && !isRequester && !isFacilityAdmin) ||
     (pathnames[0] === 'my-requests' && isRequester) ||
-    (pathnames[0] === 'requests' && isFacilityAdmin && pathnames.length === 1);
+    (pathnames[0] === 'requests' && isFacilityAdmin && pathnames.length === 1) ||
+    (pathnames[0] === 'repair-plans' && isStaff);
 
   if (isHomeView) {
     return (

@@ -113,6 +113,18 @@ export default function Header({ onToggleSidebar }) {
                     <FileText size={15} color="var(--color-due-blue)" />
                     <span>Yêu cầu của tôi</span>
                   </button>
+                ) : currentUser?.role === ROLES.STAFF ? (
+                  <button
+                    type="button"
+                    className="user-dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/repair-plans');
+                    }}
+                  >
+                    <FileText size={15} color="var(--color-due-blue)" />
+                    <span>Phương án sửa chữa</span>
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -163,7 +175,13 @@ export default function Header({ onToggleSidebar }) {
 
           {/* University Logo & Title (Matching Image 1) */}
           <Link
-            to={currentUser?.role === ROLES.REQUESTER ? '/my-requests' : '/dashboard'}
+            to={
+              currentUser?.role === ROLES.REQUESTER
+                ? '/my-requests'
+                : currentUser?.role === ROLES.STAFF
+                  ? '/repair-plans'
+                  : '/dashboard'
+            }
             className="header-brand-link"
             title="Trường Đại học Kinh tế - ĐH Đà Nẵng"
           >

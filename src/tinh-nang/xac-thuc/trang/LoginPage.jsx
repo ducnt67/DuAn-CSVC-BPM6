@@ -38,6 +38,8 @@ export default function LoginPage() {
           ? '/my-requests'
           : result.user.role === ROLES.FACILITY_ADMIN
           ? '/requests'
+          : result.user.role === ROLES.STAFF
+          ? '/repair-plans'
           : '/dashboard';
       navigate(targetPath);
     } else {
@@ -62,6 +64,8 @@ export default function LoginPage() {
             ? '/my-requests'
             : user.role === ROLES.FACILITY_ADMIN
             ? '/requests'
+            : user.role === ROLES.STAFF
+            ? '/repair-plans'
             : '/dashboard';
         navigate(targetPath);
       } else {

@@ -123,7 +123,7 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
           </button>
 
           {visibleGroups.map((group) => {
-            const showGroupHeader = !group.hideHeader && group.items.length > 1;
+            const showGroupHeader = !group.hideHeader;
             const isGroupCollapsed = showGroupHeader && Boolean(collapsedGroups[group.group]);
 
             return (
