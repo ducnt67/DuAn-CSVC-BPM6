@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
 import { REQUEST_STATUS, REPAIR_TYPE, REPAIR_TYPE_LABELS } from '../../../dung-chung/hang-so/statuses';
 import { ROLES } from '../../../dung-chung/hang-so/roles';
-import { Wrench, Eye, CheckCircle2, FileText, CheckSquare, AlertTriangle } from 'lucide-react';
+import { Wrench, Eye, CheckCircle2, CheckSquare, AlertTriangle } from 'lucide-react';
 import PageHeader from '../../../dung-chung/bo-cuc/PageHeader';
 import DataTable from '../../../dung-chung/thanh-phan/DataTable';
 import StatusBadge from '../../../dung-chung/thanh-phan/StatusBadge';
@@ -98,7 +98,6 @@ export default function RepairWorkPage() {
       align: 'right',
       render: (_, row) => {
         const isSurveyStage = [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.SURVEYING].includes(row.status);
-        const isPlanStage = row.status === REQUEST_STATUS.WAITING_FOR_PLAN;
         const isInternalStage = row.status === REQUEST_STATUS.INTERNAL_REPAIR;
         const isAcceptanceStage = [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.NEEDS_REMEDIATION].includes(row.status);
 
@@ -115,20 +114,6 @@ export default function RepairWorkPage() {
                 }}
               >
                 Khảo sát
-              </Button>
-            )}
-
-            {isPlanStage && (
-              <Button
-                variant="primary"
-                size="sm"
-                icon={FileText}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/requests/${row.id}`);
-                }}
-              >
-                Lập phương án
               </Button>
             )}
 
@@ -186,7 +171,6 @@ export default function RepairWorkPage() {
         {[
           { key: 'ALL', label: 'Tất cả công việc' },
           { key: 'SURVEY', label: 'Cần khảo sát' },
-          { key: 'PLAN', label: 'Cần lập phương án' },
           { key: 'INTERNAL', label: 'Đang sửa chữa nội bộ' },
           { key: 'ACCEPTANCE', label: 'Cần nghiệm thu / Khắc phục' },
         ].map((tab) => (
@@ -232,4 +216,3 @@ export default function RepairWorkPage() {
     </div>
   );
 }
-
