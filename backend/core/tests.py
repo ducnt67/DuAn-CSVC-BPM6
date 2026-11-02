@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -12,6 +13,7 @@ from core.models import (
     RepairRequest,
     RequestStatus,
     Role,
+    Survey,
     User,
 )
 
@@ -50,6 +52,50 @@ class RepairWorkflowTests(APITestCase):
     def post_as(self, user, path, data=None):
         self.client.force_authenticate(user)
         return self.client.post(path, data or {}, format="json")
+
+    def test_database_rejects_invalid_costs_and_progress(self):
+        obj = self.make_request()
+
+        def assert_rejected(write):
+            with self.assertRaises(IntegrityError):
+                with transaction.atomic():
+                    write()
+
+        assert_rejected(
+            lambda: RepairRequest.objects.filter(pk=obj.pk).update(external_progress=101)
+        )
+        assert_rejected(
+            lambda: RepairRequest.objects.filter(pk=obj.pk).update(estimated_cost=-1)
+        )
+        assert_rejected(
+            lambda: RepairRequest.objects.filter(pk=obj.pk).update(remediation_hours=0)
+        )
+        assert_rejected(
+            lambda: Survey.objects.create(
+                request=obj,
+                survey_date=timezone.now(),
+                findings="Hiện trạng",
+                root_cause="Nguyên nhân",
+                estimated_cost=-1,
+                surveyor=self.staff,
+            )
+        )
+        assert_rejected(
+            lambda: RepairPlan.objects.create(
+                request=obj,
+                title="Phương án không hợp lệ",
+                repair_type="INTERNAL",
+                estimated_cost=-1,
+                proposed_by=self.admin,
+            )
+        )
+        assert_rejected(
+            lambda: ExternalWork.objects.create(
+                request=obj,
+                title="Công việc không hợp lệ",
+                progress=101,
+            )
+        )
 
     def test_internal_flow_requires_requester_confirmation(self):
         obj = self.make_request(status=RequestStatus.INTERNAL_REPAIR, assigned_staff=self.staff)

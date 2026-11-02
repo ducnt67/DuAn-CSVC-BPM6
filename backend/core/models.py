@@ -3,6 +3,7 @@ import uuid
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Q
 
 
 class BusinessSequence(models.Model):
@@ -171,6 +172,20 @@ class RepairRequest(models.Model):
             models.Index(fields=["assigned_staff", "status"]),
             models.Index(fields=["building", "created_at"]),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(estimated_cost__isnull=True) | Q(estimated_cost__gte=0),
+                name="request_estimated_cost_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(external_progress__gte=0, external_progress__lte=100),
+                name="request_external_progress_0_100",
+            ),
+            models.CheckConstraint(
+                condition=Q(remediation_hours__gt=0),
+                name="request_remediation_hours_positive",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.code:
@@ -206,6 +221,14 @@ class Survey(models.Model):
     notes = models.TextField(blank=True)
     surveyor = models.ForeignKey(User, on_delete=models.PROTECT, related_name="surveys")
     completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(estimated_cost__isnull=True) | Q(estimated_cost__gte=0),
+                name="survey_estimated_cost_nonnegative",
+            ),
+        ]
 
 
 class RepairPlanStatus(models.TextChoices):
@@ -245,6 +268,12 @@ class RepairPlan(models.Model):
     class Meta:
         ordering = ["-proposed_at"]
         indexes = [models.Index(fields=["approval_status", "proposed_at"])]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(estimated_cost__gte=0),
+                name="repair_plan_estimated_cost_nonnegative",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.code:
@@ -312,7 +341,11 @@ class ExternalWork(models.Model):
                 fields=["request", "plan"],
                 condition=models.Q(plan__isnull=False),
                 name="unique_external_work_per_plan",
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(progress__gte=0, progress__lte=100),
+                name="external_work_progress_0_100",
+            ),
         ]
 
     def save(self, *args, **kwargs):

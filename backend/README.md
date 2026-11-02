@@ -4,6 +4,8 @@ Tài liệu này hướng dẫn chạy backend, đăng nhập web bằng tài kh
 
 Backend cung cấp REST API cho frontend React. Dữ liệu nghiệp vụ được lưu trong database phía server; trình duyệt chỉ giữ JWT đăng nhập. Khi phát triển local, hệ thống dùng SQLite nên không cần cài thêm database server.
 
+Xem sơ đồ thực thể và quan hệ theo schema đang chạy tại [ERD.md](ERD.md).
+
 ## 1. Chuẩn bị môi trường
 
 Cần có:
