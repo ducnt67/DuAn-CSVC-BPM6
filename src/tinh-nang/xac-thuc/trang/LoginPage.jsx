@@ -33,11 +33,14 @@ export default function LoginPage() {
 
     if (result.success) {
       addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
-      const targetPath = result.user.role === ROLES.REQUESTER
-        ? '/my-requests'
-        : result.user.role === ROLES.FACILITY_ADMIN
-          ? '/requests'
-          : '/dashboard';
+      const targetPath =
+        result.user.role === ROLES.REQUESTER
+          ? '/my-requests'
+          : result.user.role === ROLES.FACILITY_ADMIN
+            ? '/requests'
+            : result.user.role === ROLES.STAFF
+              ? '/repair-plans'
+              : '/dashboard';
       navigate(targetPath);
     } else {
       setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
@@ -56,11 +59,14 @@ export default function LoginPage() {
       setLoading(false);
       if (result.success) {
         addToast(`Đăng nhập thành công với vai trò ${ROLE_LABELS[user.role]}`, 'success');
-        const targetPath = user.role === ROLES.REQUESTER
-          ? '/my-requests'
-          : user.role === ROLES.FACILITY_ADMIN
-            ? '/requests'
-            : '/dashboard';
+        const targetPath =
+          user.role === ROLES.REQUESTER
+            ? '/my-requests'
+            : user.role === ROLES.FACILITY_ADMIN
+              ? '/requests'
+              : user.role === ROLES.STAFF
+                ? '/repair-plans'
+                : '/dashboard';
         navigate(targetPath);
       } else {
         setErrorMessage(result.message || 'Không thể đăng nhập bằng tài khoản demo.');

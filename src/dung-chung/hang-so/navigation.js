@@ -15,7 +15,7 @@ export const NAVIGATION = [
         label: 'Tổng quan',
         path: '/dashboard',
         icon: LayoutDashboard,
-        roles: [ROLES.STAFF, ROLES.DIRECTOR, ROLES.PROCUREMENT],
+        roles: [ROLES.FACILITY_ADMIN, ROLES.DIRECTOR, ROLES.PROCUREMENT],
       },
     ],
   },

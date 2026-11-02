@@ -119,42 +119,47 @@ Luồng nghiệp vụ hiện được phối hợp giữa các màn hình và `A
 ## 6. Hướng dẫn cài đặt và chạy ứng dụng
 
 ### Yêu cầu môi trường
-- Node.js (phiên bản 18+ trở lên).
-- npm hoặc yarn.
+- **Node.js** (phiên bản 18+ trở lên) và **npm**.
+- **Python** (phiên bản 3.10 trở lên).
+- **PyCharm** (khuyến nghị cài đặt PyCharm Community hoặc Professional để mở thư mục `backend`, chạy server và quản lý môi trường ảo thuận tiện).
+- **SQLite** (cơ sở dữ liệu cục bộ; mặc định đi kèm sẵn với Python, không cần cài đặt server database phức tạp. Tự động sinh file `backend/db.sqlite3` sau khi chạy migrate; có thể dùng công cụ Database trong PyCharm hoặc DB Browser for SQLite để xem và quản lý cơ sở dữ liệu).
 
 ### Các bước khởi chạy
 
-1. Cài đặt các gói phụ thuộc:
+#### Bước 1: Khởi chạy Backend Django & Cơ sở dữ liệu SQLite
+> **Khuyến nghị dùng PyCharm**: Mở thư mục `backend` bằng PyCharm để cấu hình Python Interpreter (`backend/.venv`) và quản lý cơ sở dữ liệu trực quan.
+
+1. **Khởi tạo môi trường ảo và cài đặt thư viện**:
+   - Mở Terminal trong PyCharm (hoặc PowerShell) tại thư mục `backend`:
+   ```powershell
+   cd backend
+   py -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   ```
+2. **Khởi tạo cơ sở dữ liệu SQLite và nạp dữ liệu mẫu demo**:
+   ```powershell
+   python manage.py migrate
+   python manage.py seed_demo
+   ```
+   *Lệnh `migrate` sẽ tự động khởi tạo cơ sở dữ liệu SQLite tại `backend/db.sqlite3`. Tiếp theo, `seed_demo` nạp 6 tài khoản người dùng, 12 CSVC và các yêu cầu sửa chữa mẫu.*
+3. **Khởi chạy máy chủ Backend**:
+   ```powershell
+   python manage.py runserver
+   ```
+   *Backend sẽ chạy tại `http://127.0.0.1:8000`. Giữ cửa sổ terminal này để backend tiếp tục phục vụ API.*
+
+#### Bước 2: Khởi chạy Frontend React
+Mở một cửa sổ terminal mới tại thư mục gốc dự án:
 ```bash
 npm install
-```
-
-2. Khởi chạy Django backend trong một cửa sổ PowerShell riêng:
-```powershell
-cd backend
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py seed_demo
-python manage.py runserver
-```
-Nếu đã cài đặt backend trước đó, chỉ cần chạy `python manage.py runserver`. Database SQLite mặc định nằm tại `backend/db.sqlite3`; tài khoản mẫu và cách kiểm tra API được mô tả trong [backend/README.md](./backend/README.md).
-
-3. Khởi chạy frontend trong cửa sổ terminal khác:
-```bash
 npm run dev
 ```
-Trình duyệt sẽ mở tại: `http://localhost:5173/` (hoặc cổng hiển thị trên console).
+Trình duyệt sẽ mở tại `http://localhost:3000/` (hoặc cổng được hiển thị trong terminal). Frontend đã được cấu hình sẵn proxy `/api` tự động chuyển tiếp tới backend Django và SQLite trên cổng 8000.
 
-4. Xây dựng bản phát hành sản phẩm (Production Build):
+#### Bước 3 (Tùy chọn): Xây dựng bản phát hành sản phẩm (Production Build)
 ```bash
 npm run build
-```
-Bản dựng tối ưu được tạo ra trong thư mục `dist/`.
-
-5. Xem trước bản dựng production:
-```bash
 npm run preview
 ```
 

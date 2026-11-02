@@ -1,9 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft } from 'lucide-react';
 import Button from '../../dung-chung/thanh-phan/Button';
+import { useApp } from '../bo-cung-cap/AppContext';
+import { ROLES } from '../../dung-chung/hang-so/roles';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
+  const { currentUser } = useApp();
+  const isStaff = currentUser?.role === ROLES.STAFF;
+  const homePath = isStaff ? '/repair-plans' : '/dashboard';
 
   return (
     <div
@@ -39,11 +44,10 @@ export default function NotFoundPage() {
         <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate(-1)}>
           Quay lại
         </Button>
-        <Button variant="primary" icon={Home} onClick={() => navigate('/dashboard')}>
-          Về bảng điều khiển
+        <Button variant="primary" icon={Home} onClick={() => navigate(homePath)}>
+          {isStaff ? 'Về phương án sửa chữa' : 'Về bảng điều khiển'}
         </Button>
       </div>
     </div>
   );
 }
-
