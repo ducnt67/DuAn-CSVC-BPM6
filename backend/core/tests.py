@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -7,9 +8,12 @@ from core.models import (
     ContractHandling,
     ExternalWork,
     ExternalWorkStatus,
+    Notification,
+    RepairPlan,
     RepairRequest,
     RequestStatus,
     Role,
+    Survey,
     User,
 )
 
@@ -48,6 +52,50 @@ class RepairWorkflowTests(APITestCase):
     def post_as(self, user, path, data=None):
         self.client.force_authenticate(user)
         return self.client.post(path, data or {}, format="json")
+
+    def test_database_rejects_invalid_costs_and_progress(self):
+        obj = self.make_request()
+
+        def assert_rejected(write):
+            with self.assertRaises(IntegrityError):
+                with transaction.atomic():
+                    write()
+
+        assert_rejected(
+            lambda: RepairRequest.objects.filter(pk=obj.pk).update(external_progress=101)
+        )
+        assert_rejected(
+            lambda: RepairRequest.objects.filter(pk=obj.pk).update(estimated_cost=-1)
+        )
+        assert_rejected(
+            lambda: RepairRequest.objects.filter(pk=obj.pk).update(remediation_hours=0)
+        )
+        assert_rejected(
+            lambda: Survey.objects.create(
+                request=obj,
+                survey_date=timezone.now(),
+                findings="Hiện trạng",
+                root_cause="Nguyên nhân",
+                estimated_cost=-1,
+                surveyor=self.staff,
+            )
+        )
+        assert_rejected(
+            lambda: RepairPlan.objects.create(
+                request=obj,
+                title="Phương án không hợp lệ",
+                repair_type="INTERNAL",
+                estimated_cost=-1,
+                proposed_by=self.admin,
+            )
+        )
+        assert_rejected(
+            lambda: ExternalWork.objects.create(
+                request=obj,
+                title="Công việc không hợp lệ",
+                progress=101,
+            )
+        )
 
     def test_internal_flow_requires_requester_confirmation(self):
         obj = self.make_request(status=RequestStatus.INTERNAL_REPAIR, assigned_staff=self.staff)
@@ -173,6 +221,20 @@ class RepairWorkflowTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.data["survey"]["findings"], "Bóng đèn bị cháy.")
+        self.assertTrue(
+            Notification.objects.filter(
+                request=obj,
+                target_role=Role.FACILITY_ADMIN,
+                title="Yêu cầu đã khảo sát xong",
+            ).exists()
+        )
+        self.client.force_authenticate(self.admin)
+        response = self.client.get("/api/v1/requests/")
+        self.assertIn(obj.code, [item["id"] for item in response.data["results"]])
+        response = self.client.get("/api/v1/notifications/")
+        self.assertTrue(
+            any(item["title"] == "Yêu cầu đã khảo sát xong" for item in response.data["results"])
+        )
         response = self.post_as(
             self.staff,
             f"/api/v1/requests/{obj.code}/repair-plan/",
@@ -182,7 +244,22 @@ class RepairWorkflowTests(APITestCase):
                 "estimatedCost": 250000,
             },
         )
+        self.assertEqual(response.status_code, 403)
+        response = self.post_as(
+            self.admin,
+            f"/api/v1/requests/{obj.code}/repair-plan/",
+            {
+                "title": "Thay bóng đèn",
+                "repairType": "INTERNAL",
+                "estimatedCost": 250000,
+            },
+        )
         self.assertEqual(response.status_code, 201, response.data)
+        self.assertTrue(
+            RepairPlan.objects.filter(request=obj, proposed_by=self.admin).exists()
+        )
+        obj.refresh_from_db()
+        self.assertEqual(obj.status, RequestStatus.INTERNAL_REPAIR)
         self.assertIn("approvalStatus", response.data, response.data)
         self.assertEqual(response.data["approvalStatus"], "APPROVED")
         self.assertEqual(len(response.data["approvalHistory"]), 2)
@@ -239,6 +316,13 @@ class RepairWorkflowTests(APITestCase):
         plan.refresh_from_db()
         self.assertEqual(obj.status, RequestStatus.WAITING_FOR_PLAN)
         self.assertEqual(plan.approval_status, RepairPlanStatus.REJECTED)
+        self.assertTrue(
+            Notification.objects.filter(
+                request=obj,
+                target_role=Role.FACILITY_ADMIN,
+                title="Phương án bị từ chối",
+            ).exists()
+        )
 
     def test_reports_summarize_database_and_export_utf8_csv(self):
         self.make_request(

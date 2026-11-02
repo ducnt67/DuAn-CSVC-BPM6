@@ -265,12 +265,12 @@ export default function RequestDetailPage() {
   };
 
   // 5. Cán bộ: Ghi nhận khảo sát
-  const handleSaveSurvey = () => {
+  const handleSaveSurvey = async () => {
     if (!surveyData.findings.trim() || !surveyData.rootCause.trim()) {
       addToast('Vui lòng nhập đầy đủ hiện trạng và nguyên nhân', 'error');
       return;
     }
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.WAITING_FOR_PLAN,
       survey: {
         ...surveyData,
@@ -295,12 +295,13 @@ export default function RequestDetailPage() {
         ),
       ],
     });
+    if (!saved) return;
     addToast('Đã ghi nhận khảo sát hiện trạng thành công', 'success');
     setModalType(null);
   };
 
-  // 6. Cán bộ: Lập phương án
-  const handleSavePlan = () => {
+  // 6. Quản trị CSVC: Lập phương án sau khi cán bộ hoàn tất khảo sát
+  const handleSavePlan = async () => {
     if (!planData.title.trim()) {
       addToast('Vui lòng nhập tiêu đề phương án', 'error');
       return;
@@ -330,7 +331,7 @@ export default function RequestDetailPage() {
 
     addRepairPlan(newPlan);
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: nextStatus,
       repairType: planData.repairType,
       planId: newPlanId,
@@ -354,7 +355,8 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast(`Đã lập phương án ${newPlanId}`, 'success');
+    if (!saved) return;
+    addToast('Đã lập phương án và chuyển yêu cầu sang bước tiếp theo', 'success');
     setModalType(null);
   };
 
@@ -451,7 +453,7 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Đã từ chối phương án và gửi phản hồi đến cán bộ phụ trách', 'warning');
+    addToast('Đã từ chối phương án và gửi phản hồi đến Quản trị CSVC', 'warning');
     setModalType(null);
   };
 
@@ -1958,7 +1960,7 @@ export default function RequestDetailPage() {
         </div>
       </Modal>
 
-      {/* 5. Modal Lập phương án xử lý (Staff) */}
+      {/* 5. Modal lập phương án xử lý (Facility Admin) */}
       <Modal
         isOpen={modalType === 'plan'}
         onClose={() => setModalType(null)}
@@ -2338,4 +2340,3 @@ const cardTitleStyle = {
   paddingBottom: 8,
   borderBottom: '1px solid var(--color-border-light)',
 };
-

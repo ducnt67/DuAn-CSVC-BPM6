@@ -31,8 +31,8 @@
 | Mã Actor | Vai trò | Họ và tên Demo | Tên đăng nhập | Mật khẩu | Quyền hạn chính |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **A01** | **Người yêu cầu** | Nguyễn Minh Anh | `nmanh` | `123` | Tạo/theo dõi yêu cầu, bổ sung thông tin được yêu cầu và xác nhận kết quả sửa chữa nội bộ. |
-| **A02** | **Quản trị CSVC** | Trần Quốc Huy | `tqhuy` | `123` | Tiếp nhận yêu cầu, yêu cầu bổ sung, phân công cán bộ kỹ thuật và quản lý danh mục CSVC. |
-| **A03** | **Cán bộ phụ trách** | Lê Hoàng Nam | `lhnam` | `123` | Khảo sát, lập phương án, cập nhật sửa chữa nội bộ và nghiệm thu công việc thuê ngoài được giao. |
+| **A02** | **Quản trị CSVC** | Trần Quốc Huy | `tqhuy` | `123` | Tiếp nhận yêu cầu, yêu cầu bổ sung, phân công cán bộ kỹ thuật, lập phương án và quản lý danh mục CSVC. |
+| **A03** | **Cán bộ phụ trách** | Lê Hoàng Nam | `lhnam` | `123` | Khảo sát, cập nhật sửa chữa nội bộ và nghiệm thu công việc thuê ngoài được giao. |
 | **A04** | **Ban Giám hiệu** | Nguyễn Thị Thu Hà | `nttha` | `123` | Xem xét, phê duyệt hoặc từ chối phương án; lý do từ chối là bắt buộc. |
 | **A05** | **BP Đầu tư & Mua sắm** | Phạm Văn Bình | `pvbinh` | `123` | Quản lý công việc thuê ngoài, thông tin đơn vị thi công và tiến độ. |
 
@@ -49,7 +49,7 @@
    - `/my-requests`: Dành riêng cho Người yêu cầu theo dõi sự cố do mình báo cáo.
    - `/requests/create`: Biểu mẫu tạo yêu cầu, chọn cơ sở vật chất, mô tả chi tiết và đính kèm tệp. Bản demo hiện chỉ lưu tên tệp, chưa tải/lưu nội dung tệp.
    - `/requests/:id`: Trang chi tiết trung tâm với **Visual Timeline BPM**, phân tab thông tin, và các hộp thoại thao tác động theo vai trò.
-3. **M03 – Quản lý xử lý sửa chữa** (`/repair-work`): Danh sách công việc được giao cho Cán bộ phụ trách, có thể lọc theo các giai đoạn khảo sát, lập phương án, sửa chữa nội bộ và nghiệm thu/khắc phục.
+3. **M03 – Quản lý xử lý sửa chữa** (`/repair-work`): Danh sách công việc được giao cho Cán bộ phụ trách, có thể lọc theo các giai đoạn khảo sát, sửa chữa nội bộ và nghiệm thu/khắc phục.
 4. **M04 – Quản lý phương án & Phê duyệt**:
    - `/repair-plans`: Danh sách phương án kỹ thuật, hình thức sửa chữa, dự toán và trạng thái phê duyệt.
    - `/approvals`: Danh sách phương án theo trạng thái chờ duyệt, đã duyệt hoặc bị từ chối; Ban Giám hiệu có thể phê duyệt hoặc từ chối phương án đang chờ, với lý do từ chối bắt buộc.
@@ -64,12 +64,12 @@
 ### Luồng 1: Sửa chữa nội bộ thành công
 1. **Người yêu cầu** tạo yêu cầu sự cố (`NEW`).
 2. **Quản trị CSVC** tiếp nhận (`ACCEPTED`) và phân công **Cán bộ phụ trách** (`SURVEYING`).
-3. **Cán bộ phụ trách** khảo sát hiện trường và lập phương án sửa chữa nội bộ. Phương án nội bộ mặc định được duyệt tự động; nếu đánh dấu cần phê duyệt thì chuyển qua Ban Giám hiệu trước khi sửa chữa (`INTERNAL_REPAIR`).
+3. **Cán bộ phụ trách** khảo sát hiện trường, sau đó **Quản trị CSVC** lập phương án sửa chữa nội bộ. Phương án nội bộ mặc định được duyệt tự động; nếu đánh dấu cần phê duyệt thì chuyển qua Ban Giám hiệu trước khi sửa chữa (`INTERNAL_REPAIR`).
 4. **Cán bộ phụ trách** sửa chữa xong và cập nhật kết quả -> Chuyển sang `WAITING_FOR_CONFIRMATION`.
 5. **Người yêu cầu** kiểm tra kết quả và bấm **Xác nhận kết quả** -> Chuyển sang `COMPLETED`.
 
 ### Luồng 2: Sửa chữa thuê ngoài thành công
-1. Khảo sát xong, **Cán bộ phụ trách** lập phương án "Thuê ngoài" kèm dự toán kinh phí -> Gửi Ban Giám hiệu (`WAITING_FOR_APPROVAL`).
+1. Khảo sát xong, **Quản trị CSVC** lập phương án "Thuê ngoài" kèm dự toán kinh phí -> Gửi Ban Giám hiệu (`WAITING_FOR_APPROVAL`).
 2. **Ban Giám hiệu** phê duyệt phương án -> Chuyển sang `WAITING_FOR_EXTERNAL_WORK`.
 3. **BP Đầu tư & Mua sắm** tiếp nhận, giao đơn vị thi công, cập nhật tiến độ -> `EXTERNAL_WORK_IN_PROGRESS`.
 4. Đơn vị thi công xong, BP Đầu tư báo hoàn thành -> Chuyển sang `WAITING_FOR_ACCEPTANCE`.
@@ -85,7 +85,7 @@
 ### Luồng 4: Phương án bị Ban Giám hiệu từ chối
 1. **Ban Giám hiệu** xem xét dự toán, bấm **Từ chối** và nhập lý do bắt buộc (VD: "Dự toán quá cao, cần tận dụng linh kiện cũ").
 2. Yêu cầu chuyển về `WAITING_FOR_PLAN`.
-3. **Cán bộ phụ trách** xem lý do từ chối, điều chỉnh lại phương án kỹ thuật và gửi phê duyệt lại.
+3. **Quản trị CSVC** xem lý do từ chối, điều chỉnh phương án và gửi phê duyệt lại.
 
 ---
 

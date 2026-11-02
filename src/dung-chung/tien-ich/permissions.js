@@ -33,7 +33,10 @@ export function canSurvey(request, currentUser) {
 }
 
 export function canCreatePlan(request, currentUser) {
-  return false;
+  return (
+    request.status === REQUEST_STATUS.WAITING_FOR_PLAN &&
+    currentUser.role === ROLES.FACILITY_ADMIN
+  );
 }
 
 export function canApprovePlan(request, currentUser) {

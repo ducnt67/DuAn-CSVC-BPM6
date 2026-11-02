@@ -159,7 +159,7 @@ export default function RepairPlanPage() {
     <div>
       <PageHeader
         title="Danh sách phương án sửa chữa"
-        description="Tổng hợp các phương án kỹ thuật và dự toán kinh phí do cán bộ kỹ thuật lập"
+        description="Tổng hợp các phương án sửa chữa và dự toán kinh phí do Quản trị CSVC lập"
       />
 
       <FilterBar onReset={() => { setSearch(''); setApprovalFilter(''); }} hasActiveFilters={Boolean(search || approvalFilter)}>
@@ -190,9 +190,8 @@ export default function RepairPlanPage() {
         pageSize={10}
         onRowClick={(row) => navigate(`/requests/${row.requestId}`)}
         emptyTitle="Chưa có phương án sửa chữa nào"
-        emptyDescription="Các phương án sẽ được tạo khi cán bộ kỹ thuật khảo sát hiện trạng sự cố."
+        emptyDescription="Quản trị CSVC lập phương án sau khi cán bộ kỹ thuật hoàn tất khảo sát hiện trạng."
       />
     </div>
   );
 }
-

@@ -49,9 +49,11 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
 
     const badges = {};
 
-    // 1. New requests for Admin
-    const newCount = requests.filter(r => r.status === REQUEST_STATUS.NEW).length;
-    if (newCount > 0) badges['request-list'] = { count: newCount, type: 'warning' };
+    // New requests and completed surveys awaiting a facility-admin plan
+    const adminActionCount = requests.filter(
+      (r) => [REQUEST_STATUS.NEW, REQUEST_STATUS.WAITING_FOR_PLAN].includes(r.status)
+    ).length;
+    if (adminActionCount > 0) badges['request-list'] = { count: adminActionCount, type: 'warning' };
 
     // 2. My active requests for Requester
     if (currentUser?.id) {

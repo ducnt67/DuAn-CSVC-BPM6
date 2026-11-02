@@ -18,7 +18,7 @@ export default function RepairWorkPage() {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
-  const [taskCategory, setTaskCategory] = useState('ALL'); // ALL, SURVEY, PLAN, INTERNAL, ACCEPTANCE
+  const [taskCategory, setTaskCategory] = useState('ALL'); // ALL, SURVEY, INTERNAL, ACCEPTANCE
 
   // Staff's assigned requests
   const myAssignedRequests = useMemo(() => {
@@ -36,9 +36,6 @@ export default function RepairWorkPage() {
 
       if (taskCategory === 'SURVEY') {
         return [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.SURVEYING].includes(r.status);
-      }
-      if (taskCategory === 'PLAN') {
-        return r.status === REQUEST_STATUS.WAITING_FOR_PLAN;
       }
       if (taskCategory === 'INTERNAL') {
         return r.status === REQUEST_STATUS.INTERNAL_REPAIR;
@@ -163,7 +160,7 @@ export default function RepairWorkPage() {
     <div>
       <PageHeader
         title="Công việc sửa chữa của cán bộ phụ trách"
-        description="Không gian làm việc chuyên trách: khảo sát hiện trường, lập phương án, xử lý kỹ thuật và nghiệm thu"
+        description="Không gian làm việc chuyên trách: khảo sát hiện trường, xử lý kỹ thuật và nghiệm thu"
       />
 
       {/* Filter Tabs by Task Phase */}

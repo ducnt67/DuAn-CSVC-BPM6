@@ -223,3 +223,56 @@
   line-height: 1.25;
   max-width: 130px;
 }
+
+@media (max-width: 768px) {
+  .bpm-workflow-card {
+    padding: 16px;
+  }
+
+  .bpm-stepper-track-wrapper {
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .bpm-stepper-track {
+    min-width: 0;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .bpm-step-column {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .bpm-node-row {
+    flex: 0 0 36px;
+    flex-direction: column;
+    width: 36px;
+    height: auto;
+    min-height: 76px;
+  }
+
+  .bpm-node-line {
+    flex: 1;
+    width: 3px;
+    height: auto;
+  }
+
+  .bpm-node-line.line-left {
+    display: none;
+  }
+
+  .bpm-step-label-content {
+    align-items: flex-start;
+    margin-top: 0;
+    padding: 2px 0 12px;
+    text-align: left;
+  }
+
+  .bpm-step-main-title,
+  .bpm-step-sub-role {
+    max-width: none;
+  }
+}
