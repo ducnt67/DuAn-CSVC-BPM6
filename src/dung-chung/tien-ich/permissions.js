@@ -104,7 +104,7 @@ export function canUpdateExternalWork(request, currentUser) {
 
 export function canCancelRequest(request, currentUser) {
   return (
-    request.status === REQUEST_STATUS.NEW &&
+    [REQUEST_STATUS.NEW, REQUEST_STATUS.NEEDS_INFORMATION].includes(request.status) &&
     currentUser.role === ROLES.REQUESTER &&
     currentUser.id === request.requesterId
   );

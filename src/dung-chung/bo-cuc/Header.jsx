@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Menu, LogOut, RotateCcw,
-  ChevronDown, LayoutDashboard, FileText
+  ChevronDown, LayoutDashboard, FileText, ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import { ROLE_LABELS, ROLES } from '../hang-so/roles';
@@ -119,11 +119,23 @@ export default function Header({ onToggleSidebar }) {
                     className="user-dropdown-item"
                     onClick={() => {
                       setUserMenuOpen(false);
-                      navigate('/repair-plans');
+                      navigate('/repair-work');
                     }}
                   >
                     <FileText size={15} color="var(--color-due-blue)" />
-                    <span>Phương án sửa chữa</span>
+                    <span>Công việc sửa chữa</span>
+                  </button>
+                ) : currentUser?.role === ROLES.DIRECTOR ? (
+                  <button
+                    type="button"
+                    className="user-dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/approvals');
+                    }}
+                  >
+                    <ShieldCheck size={15} color="var(--color-due-blue)" />
+                    <span>Phê duyệt phương án</span>
                   </button>
                 ) : (
                   <button
@@ -179,8 +191,10 @@ export default function Header({ onToggleSidebar }) {
               currentUser?.role === ROLES.REQUESTER
                 ? '/my-requests'
                 : currentUser?.role === ROLES.STAFF
-                  ? '/repair-plans'
-                  : '/dashboard'
+                  ? '/repair-work'
+                  : currentUser?.role === ROLES.DIRECTOR
+                    ? '/approvals'
+                    : '/dashboard'
             }
             className="header-brand-link"
             title="Trường Đại học Kinh tế - ĐH Đà Nẵng"

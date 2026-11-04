@@ -223,7 +223,7 @@ export async function persistRequestUpdate(request, updates, pendingPlans, pendi
     });
   } else if (updates.approvalStatus === 'APPROVED') {
     result = await apiRequest(`/requests/${code}/approve/`, { method: 'POST' });
-  } else if (status === 'WAITING_FOR_PLAN' && (updates.survey || updates.surveyData)) {
+  } else if ((status === 'WAITING_FOR_PLAN' || status === 'INTERNAL_REPAIR') && (updates.survey || updates.surveyData)) {
     const survey = updates.survey || updates.surveyData;
     result = await apiRequest(`/requests/${code}/survey/`, {
       method: 'POST',
@@ -233,6 +233,8 @@ export async function persistRequestUpdate(request, updates, pendingPlans, pendi
         rootCause: survey.rootCause || survey.cause || '',
         damageLevel: survey.damageLevel || '',
         recommendedAction: survey.recommendedAction || survey.recommendation || '',
+        canRepairImmediately: Boolean(survey.canRepairImmediately || survey.repairAction === 'IMMEDIATE'),
+        repairAction: survey.repairAction || (survey.canRepairImmediately ? 'IMMEDIATE' : 'REPORT_TO_FACILITY'),
         estimatedTime: survey.estimatedTime || '',
         estimatedCost: survey.estimatedCost ?? null,
         notes: survey.notes || '',

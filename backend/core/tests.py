@@ -347,3 +347,27 @@ class RepairWorkflowTests(APITestCase):
         self.assertEqual(csv_response.status_code, 200)
         self.assertTrue(csv_response.content.startswith(b"\xef\xbb\xbf"))
         self.assertIn(b"'=HYPERLINK", csv_response.content)
+
+    def test_survey_immediate_advances_to_step_5_internal_repair(self):
+        obj = self.make_request(status=RequestStatus.SURVEYING, assigned_staff=self.staff)
+        response = self.post_as(
+            self.staff,
+            f"/api/v1/requests/{obj.code}/survey/",
+            {
+                "surveyDate": "2026-11-03T10:00:00+07:00",
+                "findings": "Cầu chì bảng điện bị tuột chân cắm.",
+                "rootCause": "Lỏng tiếp xúc cơ học.",
+                "canRepairImmediately": True,
+            },
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        obj.refresh_from_db()
+        self.assertEqual(obj.status, RequestStatus.INTERNAL_REPAIR)
+        self.assertEqual(obj.repair_type, "INTERNAL")
+        self.assertTrue(
+            Notification.objects.filter(
+                request=obj,
+                target_role=Role.STAFF,
+                title="Bắt đầu sửa chữa nội bộ",
+            ).exists()
+        )

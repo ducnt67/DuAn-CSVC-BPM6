@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
+  XCircle,
   Search,
   Filter,
   Grid,
@@ -37,6 +38,7 @@ import SearchInput from '../../../dung-chung/thanh-phan/SearchInput';
 import Modal from '../../../dung-chung/thanh-phan/Modal';
 import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
+import { canCancelRequest } from '../../../dung-chung/tien-ich/permissions';
 import './MyRequestsPage.css';
 
 // Helper to find matching common facility category by keyword
@@ -80,6 +82,9 @@ export default function MyRequestsPage() {
 
   const [supplementModalOpen, setSupplementModalOpen] = useState(false);
   const [supplementText, setSupplementText] = useState('');
+
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelRequest, setCancelRequest] = useState(null);
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailRequest, setDetailRequest] = useState(null);
@@ -207,6 +212,19 @@ export default function MyRequestsPage() {
       addToast(`Đã gửi phản hồi yêu cầu kỹ thuật viên kiểm tra lại cho ${selectedRequest.id}`, 'warning');
     }
     setConfirmModalOpen(false);
+  };
+
+  const handleCancelRequest = async () => {
+    if (!cancelRequest || !canCancelRequest(cancelRequest, currentUser)) return;
+
+    const succeeded = await updateRequest(cancelRequest.id, {
+      status: REQUEST_STATUS.CANCELLED,
+    });
+    if (succeeded) {
+      setCancelModalOpen(false);
+      setCancelRequest(null);
+      addToast(`Đã hủy yêu cầu ${cancelRequest.id}`, 'success');
+    }
   };
 
   // Handle supplement info
@@ -381,21 +399,42 @@ export default function MyRequestsPage() {
     },
     {
       title: 'Thao tác',
-      width: '105px',
+      width: '220px',
       align: 'center',
-      render: (_, row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          icon={Eye}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/requests/${row.id}`);
-          }}
-        >
-          Chi tiết
-        </Button>
-      ),
+      render: (_, row) => {
+        const canCancel = canCancelRequest(row, currentUser);
+        const isCancellationDisabled = !canCancel;
+
+        return (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+            <Button
+              variant="outline"
+              size="sm"
+              icon={Eye}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/requests/${row.id}`);
+              }}
+            >
+              Chi tiết
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={XCircle}
+              disabled={!canCancel || isCancellationDisabled}
+              title={isCancellationDisabled ? 'Chỉ được hủy khi quản trị CSVC chưa tiếp nhận' : 'Hủy yêu cầu'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCancelRequest(row);
+                setCancelModalOpen(true);
+              }}
+            >
+              Hủy
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -661,6 +700,8 @@ export default function MyRequestsPage() {
             const Icon = category.icon;
             const isWaitingConfirmation = req.status === REQUEST_STATUS.WAITING_FOR_CONFIRMATION;
             const isNeedsInfo = req.status === REQUEST_STATUS.NEEDS_INFORMATION;
+            const canCancel = canCancelRequest(req, currentUser);
+            const isCancellationDisabled = !canCancel;
 
             return (
               <div key={req.id} className="request-ticket-card">
@@ -767,6 +808,20 @@ export default function MyRequestsPage() {
                       }}
                     >
                       Chi tiết
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      icon={XCircle}
+                      disabled={!canCancel || isCancellationDisabled}
+                      title={isCancellationDisabled ? 'Chỉ được hủy khi quản trị CSVC chưa tiếp nhận' : 'Hủy yêu cầu'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCancelRequest(req);
+                        setCancelModalOpen(true);
+                      }}
+                    >
+                      Hủy yêu cầu
                     </Button>
                   </div>
                 </div>
@@ -913,6 +968,38 @@ export default function MyRequestsPage() {
           placeholder="Nhập thông tin chỉ dẫn vị trí chính xác hơn hoặc hiện tượng phát sinh..."
           rows={4}
         />
+      </Modal>
+
+      <Modal
+        isOpen={cancelModalOpen}
+        onClose={() => {
+          setCancelModalOpen(false);
+          setCancelRequest(null);
+        }}
+        title={`Hủy yêu cầu: ${cancelRequest?.id || ''}`}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCancelModalOpen(false);
+                setCancelRequest(null);
+              }}
+            >
+              Không hủy
+            </Button>
+            <Button variant="danger" icon={XCircle} onClick={handleCancelRequest}>
+              Xác nhận hủy yêu cầu
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+          Bạn có chắc muốn hủy yêu cầu này không? Chỉ có thể hủy trước khi Quản trị CSVC xác nhận tiếp nhận.
+        </p>
+        <p style={{ margin: '12px 0 0', fontWeight: 600, color: 'var(--color-text)' }}>
+          Sau khi hủy, trạng thái sẽ chuyển thành “Đã hủy”.
+        </p>
       </Modal>
 
       {/* 7. Quick Detail Modal */}

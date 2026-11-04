@@ -16,12 +16,12 @@ export default function PortalShortcuts() {
     {
       label: 'Tạo yêu cầu báo hỏng CSVC & phòng học',
       path: '/requests/create',
-      visible: [ROLES.REQUESTER, ROLES.FACILITY_ADMIN, ROLES.STAFF].includes(role),
+      visible: [ROLES.REQUESTER, ROLES.FACILITY_ADMIN].includes(role),
     },
     {
       label: 'Tra cứu danh mục thiết bị, điều hòa & máy chiếu',
       path: '/facilities',
-      visible: [ROLES.FACILITY_ADMIN, ROLES.STAFF, ROLES.PROCUREMENT].includes(role),
+      visible: [ROLES.FACILITY_ADMIN, ROLES.PROCUREMENT].includes(role),
     },
     {
       label: 'Hộp thư phê duyệt phương án Ban Giám hiệu',
@@ -36,7 +36,7 @@ export default function PortalShortcuts() {
     {
       label: 'Quản lý thi công & hồ sơ nhà thầu thuê ngoài',
       path: '/external-work',
-      visible: [ROLES.PROCUREMENT, ROLES.STAFF].includes(role),
+      visible: [ROLES.PROCUREMENT].includes(role),
     },
     {
       label: 'Kiểm tra hiện trường & lập biên bản nghiệm thu',
@@ -46,7 +46,7 @@ export default function PortalShortcuts() {
     {
       label: 'Báo cáo chỉ số KPI & kinh phí theo tòa nhà',
       path: '/reports',
-      visible: [ROLES.DIRECTOR, ROLES.FACILITY_ADMIN].includes(role),
+      visible: [ROLES.FACILITY_ADMIN].includes(role),
     },
     {
       label: 'Theo dõi sự cố do tôi báo cáo (My Requests)',

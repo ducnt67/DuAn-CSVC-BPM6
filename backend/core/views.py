@@ -315,6 +315,11 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
                     raise ValueError
             except (TypeError, ValueError, ArithmeticError):
                 raise ValidationError({"estimatedCost": "Dự toán phải là số không âm."})
+        can_repair_immediately = bool(
+            data.get("canRepairImmediately")
+            or data.get("repairAction") == "IMMEDIATE"
+            or data.get("assessmentType") == "IMMEDIATE"
+        )
         Survey.objects.update_or_create(
             request=obj,
             defaults={
@@ -327,24 +332,44 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
                 "estimated_cost": estimated_cost or None,
                 "notes": data.get("notes", ""),
                 "surveyor": request.user,
+
             },
         )
-        obj.status = RequestStatus.WAITING_FOR_PLAN
-        obj.save(update_fields=["status", "updated_at"])
-        request_event(
-            obj,
-            request.user,
-            "Ghi nhận kết quả khảo sát",
-            f"Hiện trạng: {findings} | Nguyên nhân: {root_cause}",
-            timeline_stage="Khảo sát hiện trạng",
-        )
-        notify_role(
-            Role.FACILITY_ADMIN,
-            "Yêu cầu đã khảo sát xong",
-            f"{obj.code}: {obj.title} đang chờ lập phương án.",
-            request=obj,
-            notification_type="info",
-        )
+        if can_repair_immediately:
+            obj.status = RequestStatus.INTERNAL_REPAIR
+            obj.repair_type = RepairType.INTERNAL
+            obj.save(update_fields=["status", "repair_type", "updated_at"])
+            request_event(
+                obj,
+                request.user,
+                "Ghi nhận kết quả khảo sát",
+                f"Hiện trạng: {findings} | Đánh giá: Có thể sửa chữa ngay -> Chuyển thẳng sang Bước 5 (Sửa chữa nội bộ).",
+                timeline_stage="Khảo sát hiện trạng",
+            )
+            notify_role(
+                Role.STAFF,
+                "Bắt đầu sửa chữa nội bộ",
+                f"{obj.code}: {obj.title} đã chuyển sang bước sửa chữa nội bộ.",
+                request=obj,
+                notification_type="info",
+            )
+        else:
+            obj.status = RequestStatus.WAITING_FOR_PLAN
+            obj.save(update_fields=["status", "updated_at"])
+            request_event(
+                obj,
+                request.user,
+                "Ghi nhận kết quả khảo sát",
+                f"Hiện trạng: {findings} | Đánh giá: Báo về phòng CSVC họp bàn xem xét -> Dừng tại Bước 4 (Chờ phương án).",
+                timeline_stage="Khảo sát hiện trạng",
+            )
+            notify_role(
+                Role.FACILITY_ADMIN,
+                "Yêu cầu đã khảo sát xong",
+                f"{obj.code}: {obj.title} đang chờ lập phương án.",
+                request=obj,
+                notification_type="info",
+            )
         return Response(self.get_serializer(obj).data)
 
     @action(detail=True, methods=["post"], url_path="repair-plan")
@@ -927,7 +952,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
         require_role(request.user, Role.REQUESTER)
         if obj.requester_id != request.user.id:
             raise PermissionDenied("Chỉ người tạo yêu cầu mới được hủy.")
-        require_status(obj, RequestStatus.NEW)
+        require_status(obj, RequestStatus.NEW, RequestStatus.NEEDS_INFORMATION)
         obj.status = RequestStatus.CANCELLED
         obj.save(update_fields=["status", "updated_at"])
         request_event(obj, request.user, "Hủy yêu cầu")
