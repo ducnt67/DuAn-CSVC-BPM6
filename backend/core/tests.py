@@ -15,6 +15,7 @@ from core.models import (
     Role,
     Survey,
     User,
+    UserSession,
 )
 
 
@@ -272,6 +273,36 @@ class RepairWorkflowTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
         self.assertIn("access", response.data)
+
+    def test_logout_revokes_active_session_and_refresh_token(self):
+        response = self.client.post(
+            "/api/v1/auth/token/",
+            {"username": self.requester.username, "password": "SecurePass123!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        access = response.data["access"]
+        refresh = response.data["refresh"]
+        session = UserSession.objects.get(user=self.requester)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        self.assertEqual(self.client.get("/api/v1/auth/me/").status_code, 200)
+
+        logout_response = self.client.post(
+            "/api/v1/auth/logout/", {"refresh": refresh}, format="json"
+        )
+        self.assertEqual(logout_response.status_code, 204)
+        session.refresh_from_db()
+        self.assertIsNotNone(session.revoked_at)
+        self.assertEqual(self.client.get("/api/v1/auth/me/").status_code, 401)
+        self.assertEqual(
+            self.client.post(
+                "/api/v1/auth/token/refresh/",
+                {"refresh": refresh},
+                format="json",
+            ).status_code,
+            401,
+        )
 
     def test_facility_catalog_write_is_role_protected(self):
         payload = {

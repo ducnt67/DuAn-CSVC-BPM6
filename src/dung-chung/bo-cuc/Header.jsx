@@ -33,10 +33,10 @@ export default function Header({ onToggleSidebar }) {
     };
   }, [userMenuOpen]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     addToast('Đã đăng xuất khỏi hệ thống thành công.', 'info');
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const handleResetData = () => {

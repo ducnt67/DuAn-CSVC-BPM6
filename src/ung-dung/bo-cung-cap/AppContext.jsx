@@ -105,7 +105,7 @@ export function AppProvider({ children }) {
           }
         }
       } catch (error) {
-        signOut();
+        await signOut();
         if (hadSession) {
           addToast(
             `Không khôi phục được phiên đăng nhập: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
@@ -131,7 +131,7 @@ export function AppProvider({ children }) {
       setCurrentUser(normalizedUser);
       return { success: true, user: normalizedUser };
     } catch (error) {
-      signOut();
+      await signOut();
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Không thể kết nối máy chủ.',
@@ -145,8 +145,8 @@ export function AppProvider({ children }) {
     }
   }, [addToast, currentUser]);
 
-  const logout = useCallback(() => {
-    signOut();
+  const logout = useCallback(async () => {
+    await signOut();
     setCurrentUser(null);
     requestsRef.current = [];
     facilitiesRef.current = [];

@@ -119,8 +119,20 @@ export async function signIn(username, password, rememberMe = true) {
   }
 }
 
-export function signOut() {
-  clearTokens();
+export async function signOut() {
+  const refresh = getRefreshToken();
+  try {
+    if (refresh) {
+      await fetch(`${API_BASE_URL}/auth/logout/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh }),
+        keepalive: true,
+      });
+    }
+  } finally {
+    clearTokens();
+  }
 }
 
 export function hasSession() {
