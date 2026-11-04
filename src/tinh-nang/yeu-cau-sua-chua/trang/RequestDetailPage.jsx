@@ -7,7 +7,7 @@ import {
   canAcceptRequest, canRequestInfo, canAssignStaff, canSurvey,
   canCreatePlan, canApprovePlan, canUpdateInternalResult,
   canConfirmInternalRepair, canSubmitAcceptance, canConfirmExternalCompletion,
-  canUpdateExternalWork, canSupplementInfo
+  canUpdateExternalWork, canSupplementInfo, canCancelRequest
 } from '../../../dung-chung/tien-ich/permissions';
 import {
   ArrowLeft, CheckCircle2, Clock, AlertTriangle, UserCheck,
@@ -53,6 +53,7 @@ export default function RequestDetailPage() {
     rootCause: '',
     damageLevel: 'Trung bình',
     recommendedAction: '',
+    repairAction: 'IMMEDIATE',
   });
   const [planData, setPlanData] = useState({
     title: '',
@@ -161,6 +162,7 @@ export default function RequestDetailPage() {
   const isReqExternalUpdatable = canUpdateExternalWork(request, currentUser);
   const isReqAcceptanceSubmittable = canSubmitAcceptance(request, currentUser);
   const isReqExternalCompletionConfirmable = canConfirmExternalCompletion(request, currentUser);
+  const isReqCancellable = canCancelRequest(request, currentUser);
 
   // Helper to add audit history
   const createHistoryItem = (action, note) => ({
@@ -170,6 +172,17 @@ export default function RequestDetailPage() {
     timestamp: new Date().toISOString(),
     note,
   });
+
+  const handleCancelRequest = async () => {
+    if (!isReqCancellable) return;
+    const succeeded = await updateRequest(request.id, {
+      status: REQUEST_STATUS.CANCELLED,
+    });
+    if (succeeded) {
+      addToast(`Đã hủy yêu cầu ${request.id}`, 'success');
+      navigate('/my-requests');
+    }
+  };
 
   /* ================= ACTION HANDLERS ================= */
 
@@ -270,10 +283,16 @@ export default function RequestDetailPage() {
       addToast('Vui lòng nhập đầy đủ hiện trạng và nguyên nhân', 'error');
       return;
     }
+    const isImmediate = surveyData.repairAction === 'IMMEDIATE';
+    const nextStatus = isImmediate ? REQUEST_STATUS.INTERNAL_REPAIR : REQUEST_STATUS.WAITING_FOR_PLAN;
+
     const saved = await updateRequest(request.id, {
-      status: REQUEST_STATUS.WAITING_FOR_PLAN,
+      status: nextStatus,
+      repairType: isImmediate ? REPAIR_TYPE.INTERNAL : request.repairType,
       survey: {
         ...surveyData,
+        canRepairImmediately: isImmediate,
+        repairAction: surveyData.repairAction,
         surveyorName: currentUser.name,
         completedAt: new Date().toISOString(),
       },
@@ -284,19 +303,28 @@ export default function RequestDetailPage() {
           status: 'COMPLETED',
           updatedAt: new Date().toISOString(),
           updatedBy: currentUser.name,
-          note: `Khảo sát: ${surveyData.findings}. Nguyên nhân: ${surveyData.rootCause}`,
+          note: isImmediate
+            ? `Khảo sát: ${surveyData.findings}. Đánh giá: Có thể sửa chữa ngay, tiến trình chuyển thẳng sang Bước 5 (Sửa chữa nội bộ).`
+            : `Khảo sát: ${surveyData.findings}. Đánh giá: Báo về phòng CSVC họp bàn xem xét, dừng lại ở Bước 4 (Chờ lập phương án).`,
         },
       ],
       history: [
         ...(request.history || []),
         createHistoryItem(
           'Ghi nhận kết quả khảo sát',
-          `Hiện trạng: ${surveyData.findings} | Nguyên nhân: ${surveyData.rootCause} | Mức độ: ${surveyData.damageLevel}`
+          isImmediate
+            ? `Hiện trạng: ${surveyData.findings} | Nguyên nhân: ${surveyData.rootCause} | Kết luận: Có thể sửa chữa ngay -> Chuyển thẳng sang Bước 5 (Sửa chữa nội bộ)`
+            : `Hiện trạng: ${surveyData.findings} | Nguyên nhân: ${surveyData.rootCause} | Kết luận: Báo về phòng CSVC xem xét -> Dừng tại Bước 4 (Chờ phương án & Duyệt)`
         ),
       ],
     });
     if (!saved) return;
-    addToast('Đã ghi nhận khảo sát hiện trạng thành công', 'success');
+    addToast(
+      isImmediate
+        ? 'Đã ghi nhận khảo sát: Có thể sửa chữa ngay! Tiến trình đã chuyển thẳng tới Bước 5 (Sửa chữa nội bộ).'
+        : 'Đã ghi nhận khảo sát: Báo về phòng CSVC họp bàn! Tiến trình chuyển sang Bước 4 (Chờ lập phương án).',
+      'success'
+    );
     setModalType(null);
   };
 
@@ -311,8 +339,8 @@ export default function RequestDetailPage() {
     const nextStatus = isNeedsApproval
       ? REQUEST_STATUS.WAITING_FOR_APPROVAL
       : planData.repairType === REPAIR_TYPE.INTERNAL
-      ? REQUEST_STATUS.INTERNAL_REPAIR
-      : REQUEST_STATUS.WAITING_FOR_EXTERNAL_WORK;
+        ? REQUEST_STATUS.INTERNAL_REPAIR
+        : REQUEST_STATUS.WAITING_FOR_EXTERNAL_WORK;
 
     const newPlan = {
       id: newPlanId,
@@ -330,6 +358,7 @@ export default function RequestDetailPage() {
     };
 
     addRepairPlan(newPlan);
+
 
     const saved = await updateRequest(request.id, {
       status: nextStatus,
@@ -723,7 +752,7 @@ export default function RequestDetailPage() {
     { key: 'NEW', name: 'Khởi tạo', subtitle: 'Người yêu cầu' },
     { key: 'ACCEPTED', name: 'Tiếp nhận & Phân công', subtitle: 'Quản trị CSVC' },
     { key: 'SURVEYING', name: 'Khảo sát hiện trạng', subtitle: 'Cán bộ kỹ thuật' },
-    { key: 'PLAN', name: 'Phương án & Duyệt', subtitle: 'Lập & BGH duyệt' },
+    { key: 'PLAN', name: 'Phương án & Duyệt', subtitle: (request?.survey?.canRepairImmediately || request?.survey?.repairAction === 'IMMEDIATE') ? 'Bỏ qua (Sửa ngay)' : 'Lập & BGH duyệt' },
     { key: 'EXECUTION', name: 'Sửa chữa / Thi công', subtitle: 'Nội bộ / Thuê ngoài' },
     { key: 'ACCEPTANCE', name: 'Nghiệm thu / Xác nhận', subtitle: 'Kiểm tra & Nghiệm thu' },
     { key: 'COMPLETED', name: 'Hoàn thành', subtitle: 'Kết thúc quy trình' },
@@ -923,6 +952,18 @@ export default function RequestDetailPage() {
               </Button>
             )}
 
+            {isRequester && (
+              <Button
+                variant="danger"
+                icon={XCircle}
+                disabled={!isReqCancellable}
+                title={!isReqCancellable ? 'Chỉ được hủy khi quản trị CSVC chưa tiếp nhận' : 'Hủy yêu cầu'}
+                onClick={() => setModalType('cancel')}
+              >
+                Hủy yêu cầu
+              </Button>
+            )}
+
             {isReqInternalConfirmable && (
               <Button
                 variant="primary"
@@ -938,7 +979,19 @@ export default function RequestDetailPage() {
               <Button
                 variant="primary"
                 icon={Wrench}
-                onClick={() => setModalType('survey')}
+                onClick={() => {
+                  setSurveyData({
+                    surveyDate: request.survey?.surveyDate || new Date().toISOString().slice(0, 16),
+                    findings: request.survey?.findings || '',
+                    rootCause: request.survey?.rootCause || '',
+                    damageLevel: request.survey?.damageLevel || 'Trung bình',
+                    recommendedAction: request.survey?.recommendedAction || '',
+                    repairAction: request.survey?.canRepairImmediately !== undefined
+                      ? (request.survey.canRepairImmediately ? 'IMMEDIATE' : 'REPORT_TO_FACILITY')
+                      : (request.survey?.repairAction || 'IMMEDIATE'),
+                  });
+                  setModalType('survey');
+                }}
               >
                 Ghi nhận khảo sát
               </Button>
@@ -1191,7 +1244,7 @@ export default function RequestDetailPage() {
           <div style={cardStyle}>
             <h3 style={cardTitleStyle}>Thông tin tiếp nhận & Nhân sự phụ trách</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: '0.875rem' }}>
-              
+
               {/* 1. Tình trạng tiếp nhận */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div
@@ -1568,6 +1621,14 @@ export default function RequestDetailPage() {
                       <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Mức độ hư hỏng:</span>
                       <div style={{ fontWeight: 600, color: 'var(--color-danger)' }}>{request.survey.damageLevel}</div>
                     </div>
+                    <div>
+                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>Đánh giá & Hướng xử lý:</span>
+                      <div style={{ fontWeight: 600, marginTop: 2, color: (request.survey.canRepairImmediately || request.survey.repairAction === 'IMMEDIATE') ? 'var(--color-success)' : 'var(--color-blue)' }}>
+                        {(request.survey.canRepairImmediately || request.survey.repairAction === 'IMMEDIATE')
+                          ? '✓ Có thể sửa chữa ngay (Đi thẳng tới Bước 5: Sửa chữa nội bộ)'
+                          : '⚑ Báo về phòng Cơ sở vật chất họp bàn xem xét (Bước 4: Chờ phương án & Duyệt)'}
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
@@ -1841,6 +1902,30 @@ export default function RequestDetailPage() {
 
       {/* ================= MODALS FOR WORKFLOW ACTIONS ================= */}
 
+      {/* Modal Hủy yêu cầu (Requester) */}
+      <Modal
+        isOpen={modalType === 'cancel'}
+        onClose={() => setModalType(null)}
+        title={`Hủy yêu cầu: ${request.id}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModalType(null)}>
+              Không hủy
+            </Button>
+            <Button variant="danger" icon={XCircle} onClick={handleCancelRequest}>
+              Xác nhận hủy yêu cầu
+            </Button>
+          </>
+        }
+      >
+        <p style={{ margin: 0, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+          Bạn có chắc muốn hủy yêu cầu này không? Chỉ có thể hủy trước khi Quản trị CSVC xác nhận tiếp nhận.
+        </p>
+        <p style={{ margin: '12px 0 0', fontWeight: 600, color: 'var(--color-text)' }}>
+          Sau khi hủy, trạng thái sẽ chuyển thành “Đã hủy”.
+        </p>
+      </Modal>
+
       {/* 1. Modal Phân công cán bộ (Facility Admin) */}
       <Modal
         isOpen={modalType === 'assign'}
@@ -1957,6 +2042,49 @@ export default function RequestDetailPage() {
             onChange={(e) => setSurveyData((p) => ({ ...p, damageLevel: e.target.value }))}
             options={['Nhẹ (Khắc phục nhanh)', 'Trung bình', 'Nghiêm trọng (Hỏng toàn bộ cụm)']}
           />
+        </div>
+
+        {/* Đánh giá khả năng xử lý & Tiến trình tiếp theo */}
+        <div style={{ marginTop: 16 }}>
+          <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: 8, color: 'var(--color-text)' }}>
+            Đánh giá khả năng xử lý & Tiến trình tiếp theo <span style={{ color: 'var(--color-danger)' }}>*</span>
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+            <div
+              onClick={() => setSurveyData((p) => ({ ...p, repairAction: 'IMMEDIATE' }))}
+              style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: `2px solid ${surveyData.repairAction === 'IMMEDIATE' ? 'var(--color-blue)' : 'var(--color-border)'}`, backgroundColor: surveyData.repairAction === 'IMMEDIATE' ? 'var(--color-blue-light)' : 'var(--color-white)', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: '0.875rem', color: surveyData.repairAction === 'IMMEDIATE' ? 'var(--color-blue)' : 'var(--color-text)' }}>
+                <input
+                  type="radio"
+                  name="surveyRepairAction"
+                  checked={surveyData.repairAction === 'IMMEDIATE'}
+                  onChange={() => setSurveyData((p) => ({ ...p, repairAction: 'IMMEDIATE' }))}
+                  style={{ accentColor: 'var(--color-blue)', cursor: 'pointer' }}
+                />
+                <span>Có thể sửa chữa ngay</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 6, paddingLeft: 22, lineHeight: 1.4 }}>
+              </div>
+            </div>
+            <div
+              onClick={() => setSurveyData((p) => ({ ...p, repairAction: 'REPORT_TO_FACILITY' }))}
+              style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', border: `2px solid ${surveyData.repairAction === 'REPORT_TO_FACILITY' ? 'var(--color-blue)' : 'var(--color-border)'}`, backgroundColor: surveyData.repairAction === 'REPORT_TO_FACILITY' ? 'var(--color-blue-light)' : 'var(--color-white)', cursor: 'pointer', transition: 'all 0.2s' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: '0.875rem', color: surveyData.repairAction === 'REPORT_TO_FACILITY' ? 'var(--color-blue)' : 'var(--color-text)' }}>
+                <input
+                  type="radio"
+                  name="surveyRepairAction"
+                  checked={surveyData.repairAction === 'REPORT_TO_FACILITY'}
+                  onChange={() => setSurveyData((p) => ({ ...p, repairAction: 'REPORT_TO_FACILITY' }))}
+                  style={{ accentColor: 'var(--color-blue)', cursor: 'pointer' }}
+                />
+                <span>Báo về phòng Cơ sở vật chất</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 6, paddingLeft: 22, lineHeight: 1.4 }}>
+              </div>
+            </div>
+          </div>
         </div>
       </Modal>
 

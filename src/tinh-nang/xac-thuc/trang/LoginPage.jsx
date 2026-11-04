@@ -39,7 +39,9 @@ export default function LoginPage() {
           : result.user.role === ROLES.FACILITY_ADMIN
             ? '/requests'
             : result.user.role === ROLES.STAFF
-              ? '/repair-plans'
+            ? '/repair-work'
+                : (result?.user?.role || user?.role) === ROLES.DIRECTOR
+                ? '/approvals'
               : '/dashboard';
       navigate(targetPath);
     } else {
@@ -65,7 +67,9 @@ export default function LoginPage() {
             : user.role === ROLES.FACILITY_ADMIN
               ? '/requests'
               : user.role === ROLES.STAFF
-                ? '/repair-plans'
+              ? '/repair-work'
+                : (result?.user?.role || user?.role) === ROLES.DIRECTOR
+                ? '/approvals'
                 : '/dashboard';
         navigate(targetPath);
       } else {

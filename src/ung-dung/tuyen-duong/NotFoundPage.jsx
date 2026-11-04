@@ -8,7 +8,7 @@ export default function NotFoundPage() {
   const navigate = useNavigate();
   const { currentUser } = useApp();
   const isStaff = currentUser?.role === ROLES.STAFF;
-  const homePath = isStaff ? '/repair-plans' : '/dashboard';
+  const homePath = isStaff ? '/repair-work' : '/dashboard';
 
   return (
     <div
@@ -45,7 +45,7 @@ export default function NotFoundPage() {
           Quay lại
         </Button>
         <Button variant="primary" icon={Home} onClick={() => navigate(homePath)}>
-          {isStaff ? 'Về phương án sửa chữa' : 'Về bảng điều khiển'}
+          {isStaff ? 'Về công việc sửa chữa' : 'Về bảng điều khiển'}
         </Button>
       </div>
     </div>

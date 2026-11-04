@@ -18,7 +18,7 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }) {
   const visibleGroups = useMemo(() => {
     // Với Quản trị CSVC, gom toàn bộ mục vào 1 danh sách duy nhất không phân nhóm
     // để khoảng cách giữa các mục menu (Danh sách YC, Kết quả phê duyệt, Báo cáo) hoàn toàn đồng đều
-    if (userRole === ROLES.FACILITY_ADMIN) {
+    if (userRole === ROLES.FACILITY_ADMIN || userRole === ROLES.DIRECTOR) {
       const allAdminItems = NAVIGATION.flatMap((g) => g.items).filter(
         (item) => item.roles && item.roles.includes(userRole)
       );

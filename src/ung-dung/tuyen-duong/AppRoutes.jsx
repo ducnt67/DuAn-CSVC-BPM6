@@ -27,6 +27,7 @@ export default function AppRoutes() {
   const isRequester = currentUser?.role === ROLES.REQUESTER;
   const isFacilityAdmin = currentUser?.role === ROLES.FACILITY_ADMIN;
   const isStaff = currentUser?.role === ROLES.STAFF;
+  const isDirector = currentUser?.role === ROLES.DIRECTOR;
 
   let defaultHome = '/dashboard';
   if (isRequester) {
@@ -34,7 +35,9 @@ export default function AppRoutes() {
   } else if (isFacilityAdmin) {
     defaultHome = '/requests';
   } else if (isStaff) {
-    defaultHome = '/repair-plans';
+    defaultHome = '/repair-work';
+  } else if (isDirector) {
+    defaultHome = '/approvals';
   }
 
   return (
@@ -57,36 +60,40 @@ export default function AppRoutes() {
                 ) : isFacilityAdmin ? (
                   <Navigate to="/requests" replace />
                 ) : isStaff ? (
-                  <Navigate to="/repair-plans" replace />
+                  <Navigate to="/repair-work" replace />
                 ) : (
-                  <DashboardPage />
+                  isDirector ? (
+                    <Navigate to="/approvals" replace />
+                  ) : (
+                    <DashboardPage />
+                  )
                 )
               }
             />
             <Route path="my-requests" element={<MyRequestsPage />} />
             <Route
               path="requests"
-              element={isRequester ? <Navigate to="/my-requests" replace /> : <RequestListPage />}
+              element={isRequester ? <Navigate to="/my-requests" replace /> : isDirector ? <Navigate to="/approvals" replace /> : <RequestListPage />}
             />
             <Route path="requests/create" element={<RequestCreatePage />} />
             <Route path="requests/:id" element={<RequestDetailPage />} />
             <Route
               path="facilities"
               element={
-                isRequester || isFacilityAdmin ? (
-                  <Navigate to={isFacilityAdmin ? "/requests" : "/my-requests"} replace />
+                isRequester || isFacilityAdmin || isStaff ? (
+                  <Navigate to={isFacilityAdmin ? "/requests" : isStaff ? "/repair-work" : "/my-requests"} replace />
                 ) : (
                   <FacilityListPage />
                 )
               }
             />
             <Route path="repair-work" element={<RepairWorkPage />} />
-            <Route path="repair-plans" element={<RepairPlanPage />} />
+            <Route path="repair-plans" element={isStaff ? <Navigate to="/repair-work" replace /> : <RepairPlanPage />} />
             <Route path="approvals" element={<ApprovalListPage />} />
             <Route path="approval-results" element={<ApprovalResultsPage />} />
             <Route path="external-work" element={<ExternalWorkPage />} />
             <Route path="acceptance" element={<AcceptancePage />} />
-            <Route path="reports" element={<ReportsPage />} />
+            <Route path="reports" element={isDirector ? <Navigate to="/approvals" replace /> : <ReportsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
