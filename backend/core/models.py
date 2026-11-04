@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class BusinessSequence(models.Model):
@@ -35,6 +36,33 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.code} - {self.get_full_name() or self.username}"
+
+
+class UserSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="security_sessions")
+    token_jti = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField(auto_now=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["user", "revoked_at"],
+                name="core_userse_user_id_1636c7_idx",
+            ),
+            models.Index(
+                fields=["expires_at"],
+                name="core_userse_expires_c40d52_idx",
+            ),
+        ]
+
+    @property
+    def is_active(self):
+        return self.revoked_at is None and self.expires_at > timezone.now()
 
 
 class FacilityStatus(models.TextChoices):

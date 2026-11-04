@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import Sidebar from './Sidebar';
@@ -10,6 +10,16 @@ export default function AppLayout() {
   const { currentUser } = useApp();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted || !currentUser) {
+        window.location.replace('/login');
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [currentUser]);
 
   // If no user is logged in, redirect to login page
   if (!currentUser) {

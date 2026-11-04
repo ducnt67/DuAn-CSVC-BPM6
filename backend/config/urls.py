@@ -3,7 +3,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from core.serializers import UsernameOrEmailTokenSerializer
+from core.auth_views import LogoutView, SessionTokenObtainPairSerializer
 from core.views import (
     CurrentUserView,
     FacilityViewSet,
@@ -26,13 +26,14 @@ router.register("notifications", NotificationViewSet, basename="notification")
 
 
 class UsernameOrEmailTokenView(TokenObtainPairView):
-    serializer_class = UsernameOrEmailTokenSerializer
+    serializer_class = SessionTokenObtainPairSerializer
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/auth/token/", UsernameOrEmailTokenView.as_view(), name="token_obtain_pair"),
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/v1/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/v1/auth/me/", CurrentUserView.as_view(), name="current-user"),
     path("api/v1/reports/summary/", ReportSummaryView.as_view(), name="report-summary"),
     path("api/v1/reports/export.csv", ReportExportView.as_view(), name="report-export"),
