@@ -57,11 +57,17 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith(("postgres://", "postgresql://")):
     from urllib.parse import unquote, urlparse
 
     parsed = urlparse(DATABASE_URL)
+    if not parsed.path or not parsed.hostname:
+        raise ValueError(
+            "DATABASE_URL PostgreSQL không hợp lệ. "
+            "Cần có host và tên database hợp lệ."
+        )
+
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -71,7 +77,10 @@ if DATABASE_URL.startswith(("postgres://", "postgresql://")):
             "HOST": parsed.hostname or "",
             "PORT": parsed.port or 5432,
             "CONN_MAX_AGE": 60,
-            "OPTIONS": {"sslmode": os.getenv("DB_SSLMODE", "prefer")},
+            "OPTIONS": {
+                "sslmode": os.getenv("DB_SSLMODE", "prefer"),
+                "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+            },
         }
     }
 else:

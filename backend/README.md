@@ -182,17 +182,32 @@ Chạy từ thư mục `backend`:
 
 ## 9. Database và triển khai
 
-SQLite phù hợp cho phát triển local; backend tự tạo file `backend\db.sqlite3`. Có thể cấu hình PostgreSQL qua biến môi trường `DATABASE_URL`, ví dụ:
+Backend hỗ trợ hai chế độ:
+
+- Không đặt `DATABASE_URL`: dùng SQLite tại `backend\db.sqlite3`, phù hợp cho phát triển local.
+- Đặt `DATABASE_URL` bắt đầu bằng `postgresql://` hoặc `postgres://`: tự động dùng PostgreSQL, không cần sửa model hay tạo migration riêng.
+
+Ví dụ cấu hình PostgreSQL:
 
 ```powershell
 $env:DATABASE_URL = "postgresql://db_user:db_password@localhost:5432/due_facility"
+$env:DB_SSLMODE = "prefer"
+$env:DB_CONNECT_TIMEOUT = "10"
 $env:DJANGO_SECRET_KEY = "thay-bang-secret-key-ngau-nhien"
 $env:DJANGO_DEBUG = "false"
 $env:DJANGO_ALLOWED_HOSTS = "api.example.edu.vn"
 $env:CORS_ALLOWED_ORIGINS = "https://app.example.edu.vn"
 ```
 
-Trước khi triển khai ngoài local, cần đặt secret riêng, cấu hình host/CORS đúng môi trường, thay mật khẩu demo và dùng PostgreSQL hoặc database phù hợp. Không đưa mật khẩu, secret key hay thông tin database thật vào Git.
+Sau khi đặt biến môi trường, chạy migration và dữ liệu mẫu:
+
+```powershell
+python manage.py migrate
+python manage.py seed_demo
+python manage.py check
+```
+
+Trên Render, đặt `DATABASE_URL` bằng Internal Database URL của PostgreSQL. Không đưa mật khẩu, secret key hay thông tin database thật vào Git. File `.env.example` chỉ là mẫu cấu hình; cần tạo biến môi trường thật trong dashboard của nền tảng deploy.
 
 ## API chính
 
