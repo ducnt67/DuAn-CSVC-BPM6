@@ -10,7 +10,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py seed_demo
-    startCommand: gunicorn config.wsgi:application
+    startCommand: gunicorn config.wsgi:application --timeout 120
     plan: free
     envVars:
       - key: DATABASE_URL
@@ -29,3 +29,8 @@ services:
         value: require
       - key: DB_CONNECT_TIMEOUT
         value: "10"
+      # Trợ lý AI: dán API key Gemini (Google AI Studio) trong dashboard Render, không commit vào Git.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODELS
+        value: gemini-3-flash-preview,gemini-3.5-flash,gemini-3.1-flash-lite

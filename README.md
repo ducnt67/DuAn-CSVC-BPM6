@@ -4,6 +4,8 @@
 
 Ứng dụng quản lý quy trình từ tiếp nhận yêu cầu, khảo sát, lập phương án và dự toán, phê duyệt khi cần, đến sửa chữa nội bộ hoặc thuê ngoài, nghiệm thu và xác nhận hoàn thành. Dữ liệu nghiệp vụ và xác thực được xử lý qua Django REST API; SQLite là cơ sở dữ liệu mặc định khi phát triển local.
 
+> **Trợ lý AI (AI Agent):** agent Gemini hỗ trợ phân loại, đánh giá mức độ, phân công khảo sát/nghiệm thu, gợi ý phương án và hỗ trợ Ban Giám hiệu ra quyết định. Xem [AI_AGENT.md](./AI_AGENT.md).
+
 > **Backend Django:** Hướng dẫn khởi chạy, tạo dữ liệu mẫu, tài khoản demo, API và các ràng buộc workflow nằm trong [backend/README.md](./backend/README.md). `localStorage`/`sessionStorage` chỉ giữ JWT đăng nhập theo lựa chọn ghi nhớ; dữ liệu nghiệp vụ được lưu trong database phía backend.
 
 ---

@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from core.models import (
+    AISuggestion,
     AcceptanceRecord,
     ApprovalAction,
     ContractHandling,
@@ -18,6 +19,7 @@ from core.models import (
     Survey,
     User,
 )
+from core.services import effective_inspector
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -244,6 +246,11 @@ class RequestSerializer(serializers.ModelSerializer):
     assignedStaffId = serializers.CharField(source="assigned_staff.code", read_only=True, allow_null=True)
     assignedStaffName = serializers.SerializerMethodField()
     assignedAt = serializers.DateTimeField(source="assigned_at", read_only=True)
+    issueCategory = serializers.CharField(source="issue_category", read_only=True)
+    issueCategoryLabel = serializers.CharField(source="get_issue_category_display", read_only=True)
+    acceptanceInspectorId = serializers.SerializerMethodField()
+    acceptanceInspectorName = serializers.SerializerMethodField()
+    inspectorAssignedAt = serializers.DateTimeField(source="inspector_assigned_at", read_only=True)
     needsApproval = serializers.BooleanField(source="needs_approval", read_only=True)
     estimatedCost = serializers.DecimalField(
         source="estimated_cost", max_digits=14, decimal_places=2, allow_null=True, read_only=True
@@ -296,7 +303,8 @@ class RequestSerializer(serializers.ModelSerializer):
             "contractHandling", "survey", "surveyData", "attachments", "history", "timeline",
             "acceptanceRecords", "acceptanceHistory", "repairPlans", "externalWorks", "contractor",
             "approvalStatus", "approvedBy", "approvedAt",
-            "approvedByName",
+            "approvedByName", "issueCategory", "issueCategoryLabel", "acceptanceInspectorId",
+            "acceptanceInspectorName", "inspectorAssignedAt",
         )
         read_only_fields = (
             "id", "requesterId", "requesterName", "createdAt", "updatedAt", "assignedStaffId",
@@ -309,12 +317,22 @@ class RequestSerializer(serializers.ModelSerializer):
             "acceptanceHistory", "repairPlans", "externalWorks", "contractor",
             "approvalStatus", "approvedBy", "approvedAt", "status", "repairType",
             "assignedStaffId", "assignedStaffName", "requesterId", "approvedByName",
+            "issueCategory", "issueCategoryLabel", "acceptanceInspectorId", "acceptanceInspectorName",
+            "inspectorAssignedAt",
         )
 
     def get_assignedStaffName(self, obj):
         if not obj.assigned_staff:
             return None
         return obj.assigned_staff.get_full_name() or obj.assigned_staff.username
+
+    def get_acceptanceInspectorId(self, obj):
+        inspector = effective_inspector(obj) if obj.repair_type == "EXTERNAL" else None
+        return inspector.code if inspector else None
+
+    def get_acceptanceInspectorName(self, obj):
+        inspector = effective_inspector(obj) if obj.repair_type == "EXTERNAL" else None
+        return (inspector.get_full_name() or inspector.username) if inspector else None
 
     def get_surveyData(self, obj):
         try:
@@ -415,3 +433,36 @@ class NotificationSerializer(serializers.ModelSerializer):
 
     def get_read(self, obj):
         return obj.read_at is not None
+
+
+class AISuggestionSerializer(serializers.ModelSerializer):
+    requestId = serializers.CharField(source="request.code", read_only=True, allow_null=True)
+    requestTitle = serializers.CharField(source="request.title", read_only=True, allow_null=True)
+    kindLabel = serializers.CharField(source="get_kind_display", read_only=True)
+    statusLabel = serializers.CharField(source="get_status_display", read_only=True)
+    createdBy = serializers.SerializerMethodField()
+    decidedBy = serializers.SerializerMethodField()
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+    decidedAt = serializers.DateTimeField(source="decided_at", read_only=True)
+    modelName = serializers.CharField(source="model_name", read_only=True)
+    toolTrace = serializers.JSONField(source="tool_trace", read_only=True)
+    latencyMs = serializers.IntegerField(source="latency_ms", read_only=True)
+    finalValue = serializers.JSONField(source="final_value", read_only=True)
+    feedbackNote = serializers.CharField(source="feedback_note", read_only=True)
+
+    class Meta:
+        model = AISuggestion
+        fields = (
+            "id", "requestId", "requestTitle", "kind", "kindLabel", "status", "statusLabel",
+            "source", "modelName", "prompt", "output", "toolTrace", "latencyMs", "error",
+            "finalValue", "feedbackNote", "createdBy", "createdAt", "decidedBy", "decidedAt",
+        )
+        read_only_fields = fields
+
+    def get_createdBy(self, obj):
+        return obj.created_by.get_full_name() or obj.created_by.username
+
+    def get_decidedBy(self, obj):
+        if not obj.decided_by:
+            return None
+        return obj.decided_by.get_full_name() or obj.decided_by.username

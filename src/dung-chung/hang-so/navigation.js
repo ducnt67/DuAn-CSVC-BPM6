@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, ClipboardList, Wrench,
   Building2, BarChart3, PlusCircle, List, ShieldCheck,
-  Truck, CheckSquare
+  Truck, CheckSquare, Sparkles
 } from 'lucide-react';
 import { ROLES } from './roles';
 
@@ -101,7 +101,7 @@ export const NAVIGATION = [
         label: 'Cơ sở vật chất',
         path: '/facilities',
         icon: Building2,
-        roles: [ROLES.PROCUREMENT],
+        roles: [ROLES.FACILITY_ADMIN, ROLES.PROCUREMENT],
       },
       {
         key: 'reports',
@@ -109,6 +109,13 @@ export const NAVIGATION = [
         path: '/reports',
         icon: BarChart3,
         roles: [ROLES.FACILITY_ADMIN],
+      },
+      {
+        key: 'ai-log',
+        label: 'Nhật ký Trợ lý AI',
+        path: '/ai-log',
+        icon: Sparkles,
+        roles: [ROLES.FACILITY_ADMIN, ROLES.DIRECTOR],
       },
     ],
   },

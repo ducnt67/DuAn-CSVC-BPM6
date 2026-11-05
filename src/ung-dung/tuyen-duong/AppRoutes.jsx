@@ -16,6 +16,7 @@ import ApprovalResultsPage from '../../tinh-nang/phe-duyet/trang/ApprovalResults
 import ExternalWorkPage from '../../tinh-nang/thue-ngoai/trang/ExternalWorkPage';
 import AcceptancePage from '../../tinh-nang/nghiem-thu/trang/AcceptancePage';
 import ReportsPage from '../../tinh-nang/bao-cao/trang/ReportsPage';
+import AiLogPage from '../../tinh-nang/tro-ly-ai/trang/AiLogPage';
 import NotFoundPage from './NotFoundPage';
 
 import { useApp } from '../bo-cung-cap/AppContext';
@@ -80,8 +81,8 @@ export default function AppRoutes() {
             <Route
               path="facilities"
               element={
-                isRequester || isFacilityAdmin || isStaff ? (
-                  <Navigate to={isFacilityAdmin ? "/requests" : isStaff ? "/repair-work" : "/my-requests"} replace />
+                isRequester || isStaff ? (
+                  <Navigate to={isStaff ? "/repair-work" : "/my-requests"} replace />
                 ) : (
                   <FacilityListPage />
                 )
@@ -94,6 +95,10 @@ export default function AppRoutes() {
             <Route path="external-work" element={<ExternalWorkPage />} />
             <Route path="acceptance" element={<AcceptancePage />} />
             <Route path="reports" element={isDirector ? <Navigate to="/approvals" replace /> : <ReportsPage />} />
+            <Route
+              path="ai-log"
+              element={isFacilityAdmin || isDirector ? <AiLogPage /> : <Navigate to={defaultHome} replace />}
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

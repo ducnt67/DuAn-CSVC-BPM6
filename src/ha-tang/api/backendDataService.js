@@ -67,6 +67,19 @@ function normalizeExternalWork(work) {
   };
 }
 
+// DRF trả `next` là URL tuyệt đối theo Host phía backend (vd http://127.0.0.1:8000/api/v1/...).
+// Gọi thẳng URL đó sẽ bị chặn CORS (qua proxy Vite) hoặc mixed-content (https -> http trên Render),
+// nên luôn chuyển về đường dẫn tương đối so với API base.
+function toApiPath(nextUrl) {
+  if (!nextUrl) return null;
+  try {
+    const url = new URL(nextUrl, window.location.origin);
+    return `${url.pathname.replace(/^.*?\/api\/v1/, '')}${url.search}`;
+  } catch {
+    return nextUrl;
+  }
+}
+
 async function getAllPages(path) {
   const results = [];
   let next = path;
@@ -77,7 +90,7 @@ async function getAllPages(path) {
       throw new Error(`Phản hồi danh sách từ ${path} không đúng định dạng.`);
     }
     results.push(...page.results);
-    next = page.next;
+    next = toApiPath(page.next);
   }
   return results;
 }
@@ -117,6 +130,7 @@ export async function createRequest(request) {
     department: request.department || '',
     contactInfo: request.contactInfo || request.contactPhone || '',
     description: request.description,
+    aiSuggestionId: request.aiSuggestionId || undefined,
     impact: request.impact || '',
     discoveredAt: request.discoveredAt || null,
     priority: request.priority,

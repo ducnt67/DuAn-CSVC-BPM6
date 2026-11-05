@@ -4,6 +4,7 @@ import { useApp } from '../../ung-dung/bo-cung-cap/AppContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Footer from './Footer';
+import AiChatWidget from '../../tinh-nang/tro-ly-ai/thanh-phan/AiChatWidget';
 import '../styles/layout.css';
 
 export default function AppLayout() {
@@ -50,6 +51,8 @@ export default function AppLayout() {
         </main>
         <Footer />
       </div>
+
+      <AiChatWidget />
 
     </div>
   );

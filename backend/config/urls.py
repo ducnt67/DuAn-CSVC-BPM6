@@ -5,6 +5,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from core.auth_views import LogoutView, SessionTokenObtainPairSerializer
 from core.views import (
+    AIChatView,
+    AIStatsView,
+    AIStatusView,
+    AISuggestionViewSet,
+    AITriagePreviewView,
     CurrentUserView,
     FacilityViewSet,
     NotificationViewSet,
@@ -23,6 +28,7 @@ router.register("requests", RepairRequestViewSet, basename="repair-request")
 router.register("repair-plans", RepairPlanViewSet, basename="repair-plan")
 router.register("external-works", ExternalWorkViewSet, basename="external-work")
 router.register("notifications", NotificationViewSet, basename="notification")
+router.register("ai/suggestions", AISuggestionViewSet, basename="ai-suggestion")
 
 
 class UsernameOrEmailTokenView(TokenObtainPairView):
@@ -37,5 +43,9 @@ urlpatterns = [
     path("api/v1/auth/me/", CurrentUserView.as_view(), name="current-user"),
     path("api/v1/reports/summary/", ReportSummaryView.as_view(), name="report-summary"),
     path("api/v1/reports/export.csv", ReportExportView.as_view(), name="report-export"),
+    path("api/v1/ai/status/", AIStatusView.as_view(), name="ai-status"),
+    path("api/v1/ai/chat/", AIChatView.as_view(), name="ai-chat"),
+    path("api/v1/ai/triage-preview/", AITriagePreviewView.as_view(), name="ai-triage-preview"),
+    path("api/v1/ai/stats/", AIStatsView.as_view(), name="ai-stats"),
     path("api/v1/", include(router.urls)),
 ]
