@@ -35,6 +35,7 @@ import Input from '../../../dung-chung/thanh-phan/Input';
 import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import PriorityBadge from '../../../dung-chung/thanh-phan/PriorityBadge';
 import StatusBadge from '../../../dung-chung/thanh-phan/StatusBadge';
+import AiTriageHint from '../../tro-ly-ai/thanh-phan/AiTriageHint';
 import './RequestCreatePage.css';
 
 export default function RequestCreatePage() {
@@ -83,6 +84,7 @@ export default function RequestCreatePage() {
   }, [currentUser?.id]);
 
   const [attachments, setAttachments] = useState([]);
+  const [aiSuggestionId, setAiSuggestionId] = useState(null);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -204,6 +206,7 @@ export default function RequestCreatePage() {
       priority: formData.priority,
       discoveredAt: formData.discoveredAt,
       description: formData.description.trim(),
+      aiSuggestionId,
       attachments: attachments.map((a) => a.name),
       timeline: [
         {
@@ -548,7 +551,7 @@ export default function RequestCreatePage() {
 
                 {/* 3. Khẩn cấp */}
                 <div
-                  className={`priority-card-premium opt-urgent ${formData.priority === PRIORITY.HIGH || formData.priority === PRIORITY.URGENT ? 'selected' : ''}`}
+                  className={`priority-card-premium opt-urgent ${[PRIORITY.HIGH, PRIORITY.URGENT].includes(formData.priority) || formData.priority === PRIORITY.URGENT ? 'selected' : ''}`}
                   onClick={() => handleInputChange('priority', PRIORITY.HIGH)}
                   role="button"
                   tabIndex={0}
@@ -559,7 +562,7 @@ export default function RequestCreatePage() {
                     </div>
                     <div className="priority-sla-tag urgent">Ứng cứu ngay</div>
                     <div className="priority-radio-circle">
-                      {(formData.priority === PRIORITY.HIGH || formData.priority === PRIORITY.URGENT) && (
+                      {([PRIORITY.HIGH, PRIORITY.URGENT].includes(formData.priority) || formData.priority === PRIORITY.URGENT) && (
                         <div className="priority-radio-dot" />
                       )}
                     </div>
@@ -605,6 +608,24 @@ export default function RequestCreatePage() {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 error={errors.description}
+              />
+
+              <AiTriageHint
+                draft={{
+                  title: formData.description.trim().split('\n')[0].slice(0, 90),
+                  description: formData.description,
+                  facilityName: currentFacility?.name || '',
+                  facilityType: currentFacility?.shortName || '',
+                  building: selectedBuilding,
+                  location: formData.location,
+                  priority: formData.priority,
+                }}
+                currentPriority={formData.priority}
+                onResult={(suggestion) => setAiSuggestionId(suggestion.id)}
+                onApply={(output) => {
+                  handleInputChange('priority', output.priority);
+                  addToast('Đã áp dụng mức độ ưu tiên theo gợi ý của Trợ lý AI', 'success');
+                }}
               />
 
               {/* Upload Ảnh / Tài liệu */}

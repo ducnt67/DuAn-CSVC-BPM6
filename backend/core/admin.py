@@ -62,3 +62,14 @@ admin.site.register(
         Survey,
     )
 )
+
+
+from core.models import AISuggestion  # noqa: E402
+
+
+@admin.register(AISuggestion)
+class AISuggestionAdmin(admin.ModelAdmin):
+    list_display = ("kind", "request", "status", "source", "model_name", "latency_ms", "created_by", "created_at")
+    list_filter = ("kind", "status", "source")
+    search_fields = ("request__code", "prompt")
+    readonly_fields = [field.name for field in AISuggestion._meta.fields]

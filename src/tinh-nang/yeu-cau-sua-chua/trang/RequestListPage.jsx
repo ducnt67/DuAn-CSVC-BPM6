@@ -1,6 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
+import AiRequestDrawer, { AiRowButton } from '../../tro-ly-ai/thanh-phan/AiRequestDrawer';
+
+// Trạng thái mà Quản trị CSVC có bước cần Trợ lý AI hỗ trợ
+const AI_ADMIN_STATUSES = [
+  'NEW', 'NEEDS_INFORMATION', 'ACCEPTED', 'SURVEYING', 'WAITING_FOR_PLAN', 'WAITING_FOR_APPROVAL',
+  'WAITING_FOR_EXTERNAL_WORK', 'EXTERNAL_WORK_IN_PROGRESS', 'WAITING_FOR_ACCEPTANCE', 'NEEDS_REMEDIATION',
+  'WAITING_REMEDIATION_RESPONSE',
+];
 import { REQUEST_STATUS, STATUS_LABELS, REPAIR_TYPE, REPAIR_TYPE_LABELS } from '../../../dung-chung/hang-so/statuses';
 import { PRIORITY, PRIORITY_LABELS } from '../../../dung-chung/hang-so/priorities';
 import { ROLES } from '../../../dung-chung/hang-so/roles';
@@ -19,6 +27,7 @@ import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
 
 export default function RequestListPage() {
   const { requests, currentUser, users, updateRequest, addToast } = useApp();
+  const [aiRequestId, setAiRequestId] = useState(null);
   const navigate = useNavigate();
 
   // Search and filter states
@@ -144,8 +153,13 @@ export default function RequestListPage() {
       field: 'id',
       sortable: true,
       width: '110px',
-      render: (val) => (
-        <span style={{ fontWeight: 600, color: 'var(--color-blue)' }}>{val}</span>
+      render: (val, row) => (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+          <span style={{ fontWeight: 600, color: 'var(--color-blue)' }}>{val}</span>
+          {currentUser?.role === ROLES.FACILITY_ADMIN && AI_ADMIN_STATUSES.includes(row.status) && (
+            <AiRowButton label="AI" onClick={() => setAiRequestId(row.id)} />
+          )}
+        </div>
       ),
     },
     {
@@ -348,6 +362,8 @@ export default function RequestListPage() {
         emptyActionLabel={hasActiveFilters ? 'Xóa bộ lọc' : undefined}
         onEmptyAction={resetFilters}
       />
+
+      {aiRequestId && <AiRequestDrawer requestId={aiRequestId} onClose={() => setAiRequestId(null)} />}
 
       {/* Assign Staff Modal */}
       <Modal

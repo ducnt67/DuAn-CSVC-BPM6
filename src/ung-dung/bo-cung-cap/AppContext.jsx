@@ -312,7 +312,7 @@ export function AppProvider({ children }) {
     requests, facilities, repairPlans, externalWorks, notifications, setNotifications,
     updateRequest, addRequest, updateFacility, addFacility,
     updateRepairPlan, addRepairPlan, updateExternalWork, addExternalWork,
-    resetDemoData, toasts, addToast, removeToast, users,
+    resetDemoData, toasts, addToast, removeToast, users, refreshData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

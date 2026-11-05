@@ -14,7 +14,16 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Avg
+
+from core.ai import gemini
+from core.ai.service import dismiss_suggestion, generate_suggestion, resolve_suggestion
 from core.models import (
+    AISuggestion,
+    AISuggestionKind,
+    AISuggestionStatus,
+    IssueCategory,
     AcceptanceRecord,
     ApprovalAction,
     ContractHandling,
@@ -33,6 +42,7 @@ from core.models import (
     User,
 )
 from core.serializers import (
+    AISuggestionSerializer,
     ExternalWorkSerializer,
     FacilitySerializer,
     NotificationSerializer,
@@ -40,18 +50,13 @@ from core.serializers import (
     RequestSerializer,
     UserSerializer,
 )
-from core.services import notify_role, record_request_event
-
-
-def requests_visible_to(user):
-    queryset = RepairRequest.objects.all()
-    if user.role == Role.REQUESTER:
-        queryset = queryset.filter(requester=user)
-    elif user.role == Role.STAFF:
-        queryset = queryset.filter(assigned_staff=user)
-    elif user.role == Role.PROCUREMENT:
-        queryset = queryset.filter(external_works__isnull=False).distinct()
-    return queryset
+from core.services import (
+    effective_inspector,
+    is_effective_inspector,
+    notify_role,
+    record_request_event,
+    requests_visible_to,
+)
 
 
 def safe_csv_cell(value):
@@ -94,6 +99,86 @@ def get_external_work(request_obj):
 def set_request_status(request_obj, status_value):
     request_obj.status = status_value
     request_obj.save(update_fields=["status", "updated_at"])
+
+
+INSPECTOR_ASSIGNABLE_STATUSES = (
+    RequestStatus.WAITING_FOR_EXTERNAL_WORK,
+    RequestStatus.EXTERNAL_WORK_IN_PROGRESS,
+    RequestStatus.WAITING_FOR_ACCEPTANCE,
+    RequestStatus.NEEDS_REMEDIATION,
+    RequestStatus.WAITING_REMEDIATION_RESPONSE,
+)
+
+# Loại phân tích AI -> vai trò được dùng và trạng thái yêu cầu phù hợp.
+AI_REQUEST_RULES = {
+    AISuggestionKind.TRIAGE: {
+        "roles": {Role.FACILITY_ADMIN},
+        "statuses": {RequestStatus.NEW, RequestStatus.NEEDS_INFORMATION, RequestStatus.ACCEPTED, RequestStatus.SURVEYING},
+    },
+    AISuggestionKind.ASSIGN_SURVEY: {
+        "roles": {Role.FACILITY_ADMIN},
+        "statuses": {RequestStatus.ACCEPTED},
+    },
+    AISuggestionKind.PLAN: {
+        "roles": {Role.FACILITY_ADMIN},
+        "statuses": {RequestStatus.WAITING_FOR_PLAN},
+    },
+    AISuggestionKind.APPROVAL_BRIEF: {
+        "roles": {Role.DIRECTOR, Role.FACILITY_ADMIN},
+        "statuses": {RequestStatus.WAITING_FOR_APPROVAL},
+    },
+    AISuggestionKind.ASSIGN_INSPECTOR: {
+        "roles": {Role.FACILITY_ADMIN},
+        "statuses": set(INSPECTOR_ASSIGNABLE_STATUSES),
+    },
+    AISuggestionKind.SURVEY_ASSIST: {
+        "roles": {Role.STAFF},
+        "statuses": {RequestStatus.ACCEPTED, RequestStatus.SURVEYING},
+    },
+    AISuggestionKind.ACCEPTANCE_CHECKLIST: {
+        "roles": {Role.STAFF},
+        "statuses": {
+            RequestStatus.WAITING_FOR_ACCEPTANCE,
+            RequestStatus.NEEDS_REMEDIATION,
+            RequestStatus.WAITING_REMEDIATION_RESPONSE,
+        },
+    },
+    AISuggestionKind.CONTRACTOR: {
+        "roles": {Role.PROCUREMENT},
+        "statuses": {RequestStatus.WAITING_FOR_EXTERNAL_WORK, RequestStatus.EXTERNAL_WORK_IN_PROGRESS},
+    },
+}
+
+
+AI_PRIMARY_KIND_BY_STATUS = {
+    RequestStatus.NEW: AISuggestionKind.TRIAGE,
+    RequestStatus.ACCEPTED: AISuggestionKind.ASSIGN_SURVEY,
+    RequestStatus.WAITING_FOR_PLAN: AISuggestionKind.PLAN,
+    RequestStatus.WAITING_FOR_APPROVAL: AISuggestionKind.APPROVAL_BRIEF,
+    RequestStatus.SURVEYING: AISuggestionKind.SURVEY_ASSIST,
+    RequestStatus.WAITING_FOR_ACCEPTANCE: AISuggestionKind.ACCEPTANCE_CHECKLIST,
+}
+
+
+def ai_kind_allowed(kind, request_obj, user):
+    rule = AI_REQUEST_RULES.get(kind)
+    if rule is None or user.role not in rule["roles"] or request_obj.status not in rule["statuses"]:
+        return False
+    if kind == AISuggestionKind.ASSIGN_INSPECTOR:
+        if request_obj.repair_type != RepairType.EXTERNAL:
+            return False
+        if request_obj.status == RequestStatus.WAITING_FOR_ACCEPTANCE and request_obj.acceptance_result == "PASS":
+            return False
+    if kind == AISuggestionKind.SURVEY_ASSIST and request_obj.assigned_staff_id != user.pk:
+        return False
+    if kind == AISuggestionKind.ACCEPTANCE_CHECKLIST:
+        if request_obj.repair_type != RepairType.EXTERNAL or not is_effective_inspector(request_obj, user):
+            return False
+        if request_obj.status == RequestStatus.WAITING_FOR_ACCEPTANCE and request_obj.acceptance_result == "PASS":
+            return False
+    if kind == AISuggestionKind.CONTRACTOR and request_obj.repair_type != RepairType.EXTERNAL:
+        return False
+    return True
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -143,7 +228,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = requests_visible_to(user).select_related(
-            "requester", "assigned_staff", "facility", "completed_by",
+            "requester", "assigned_staff", "acceptance_inspector", "facility", "completed_by",
         )
         if self.action in {"list", "retrieve"}:
             queryset = queryset.prefetch_related(
@@ -199,6 +284,15 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             request=obj,
             notification_type="info",
         )
+        suggestion_id = self.request.data.get("aiSuggestionId")
+        if suggestion_id:
+            try:
+                resolve_suggestion(
+                    obj, AISuggestionKind.TRIAGE_PREVIEW, self.request.user,
+                    {"priority": obj.priority}, suggestion_id=suggestion_id,
+                )
+            except (ValueError, DjangoValidationError):
+                pass
 
     def _get_object(self):
         obj = self.get_object()
@@ -282,6 +376,10 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             request=obj,
             recipient=staff,
         )
+        resolve_suggestion(
+            obj, AISuggestionKind.ASSIGN_SURVEY, request.user,
+            {"staff_code": staff.code, "staff_name": staff.get_full_name()},
+        )
         return Response(self.get_serializer(obj).data)
 
     @action(detail=True, methods=["post"])
@@ -333,6 +431,13 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
                 "notes": data.get("notes", ""),
                 "surveyor": request.user,
 
+            },
+        )
+        resolve_suggestion(
+            obj, AISuggestionKind.SURVEY_ASSIST, request.user,
+            {
+                "can_repair_immediately": can_repair_immediately,
+                "estimated_cost": int(Decimal(str(estimated_cost))) if estimated_cost not in (None, "") else None,
             },
         )
         if can_repair_immediately:
@@ -449,6 +554,10 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             f"{plan.title} | Hình thức: {repair_type} | Dự toán: {estimated_cost}",
             timeline_stage="Lập phương án sửa chữa",
         )
+        resolve_suggestion(
+            obj, AISuggestionKind.PLAN, request.user,
+            {"repair_type": repair_type, "estimated_cost": int(estimated_cost), "title": title},
+        )
         return Response(RepairPlanSerializer(plan).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
@@ -485,6 +594,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
                 ExternalWorkEvent.objects.create(
                     work=work, actor=request.user, action="Tiếp nhận công việc"
                 )
+        resolve_suggestion(obj, AISuggestionKind.APPROVAL_BRIEF, request.user, {"decision": "APPROVED"})
         return Response(self.get_serializer(obj).data)
 
     @action(detail=True, methods=["post"])
@@ -526,6 +636,9 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             f"{obj.code}: {reason}",
             request=obj,
             notification_type="warning",
+        )
+        resolve_suggestion(
+            obj, AISuggestionKind.APPROVAL_BRIEF, request.user, {"decision": "REJECTED", "reason": reason}
         )
         return Response(self.get_serializer(obj).data)
 
@@ -593,8 +706,8 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
                 raise ValidationError({"result": "Kết quả phải là PASS hoặc FAIL."})
         else:
             require_role(request.user, Role.STAFF)
-            if obj.assigned_staff_id != request.user.id:
-                raise PermissionDenied("Chỉ cán bộ được phân công mới được xác nhận.")
+            if not is_effective_inspector(obj, request.user):
+                raise PermissionDenied("Chỉ cán bộ được phân công nghiệm thu mới được xác nhận.")
             require_status(obj, RequestStatus.WAITING_FOR_ACCEPTANCE)
             if obj.acceptance_result != "PASS":
                 raise ValidationError({"acceptanceResult": "Chỉ được hoàn thành sau nghiệm thu ĐẠT."})
@@ -662,6 +775,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             action="Cập nhật tiến độ",
             detail=f"{contractor} | {progress}% | {work.work_notes}",
         )
+        resolve_suggestion(obj, AISuggestionKind.CONTRACTOR, request.user, {"contractor": contractor})
         obj.contractor = contractor
         obj.external_progress = progress
         obj.status = RequestStatus.EXTERNAL_WORK_IN_PROGRESS
@@ -716,7 +830,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             "Công việc thuê ngoài chờ nghiệm thu",
             f"{obj.code}: {obj.title}",
             request=obj,
-            recipient=obj.assigned_staff,
+            recipient=effective_inspector(obj),
         )
         return Response(self.get_serializer(obj).data)
 
@@ -725,8 +839,8 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
     def acceptance(self, request, code=None):
         obj = self._get_object()
         require_role(request.user, Role.STAFF)
-        if obj.assigned_staff_id != request.user.id:
-            raise PermissionDenied("Chỉ cán bộ được phân công mới được nghiệm thu.")
+        if not is_effective_inspector(obj, request.user):
+            raise PermissionDenied("Chỉ cán bộ được phân công nghiệm thu mới được nghiệm thu.")
         require_status(
             obj,
             RequestStatus.WAITING_FOR_ACCEPTANCE,
@@ -754,6 +868,10 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             remediation_notes=remediation_notes,
         )
         obj.acceptance_result = result
+        resolve_suggestion(
+            obj, AISuggestionKind.ACCEPTANCE_CHECKLIST, request.user,
+            {"check_items": check_items, "result": result},
+        )
         work = get_external_work(obj)
         if result == "PASS":
             obj.status = RequestStatus.WAITING_FOR_ACCEPTANCE
@@ -839,7 +957,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             "Công việc đã khắc phục, chờ nghiệm thu lại",
             f"{obj.code}: {note}",
             request=obj,
-            recipient=obj.assigned_staff,
+            recipient=effective_inspector(obj),
         )
         return Response(self.get_serializer(obj).data)
 
@@ -848,8 +966,8 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
     def contract_handling(self, request, code=None):
         obj = self._get_object()
         require_role(request.user, Role.STAFF)
-        if obj.assigned_staff_id != request.user.id:
-            raise PermissionDenied("Chỉ cán bộ được phân công mới được ghi nhận xử lý hợp đồng.")
+        if not is_effective_inspector(obj, request.user):
+            raise PermissionDenied("Chỉ cán bộ được phân công nghiệm thu mới được ghi nhận xử lý hợp đồng.")
         require_status(obj, RequestStatus.WAITING_REMEDIATION_RESPONSE)
         if not obj.remediation_deadline or timezone.now() < obj.remediation_deadline:
             raise ValidationError({"remediationDeadline": "Chưa hết thời hạn khắc phục 72 giờ."})
@@ -945,6 +1063,117 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
         )
         return Response(self.get_serializer(obj).data)
 
+    # ------------------------------------------------------------------
+    # Phân loại & mức độ (Quản trị CSVC xác nhận, có thể theo đề xuất AI)
+    # ------------------------------------------------------------------
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def triage(self, request, code=None):
+        obj = self._get_object()
+        require_role(request.user, Role.FACILITY_ADMIN)
+        require_status(
+            obj, RequestStatus.NEW, RequestStatus.NEEDS_INFORMATION, RequestStatus.ACCEPTED,
+            RequestStatus.SURVEYING,
+        )
+        priority = str(request.data.get("priority", obj.priority)).upper()
+        category = str(request.data.get("issueCategory", obj.issue_category or "")).upper()
+        if priority not in {"LOW", "MEDIUM", "HIGH", "URGENT"}:
+            raise ValidationError({"priority": "Mức độ ưu tiên không hợp lệ."})
+        if category not in IssueCategory.values:
+            raise ValidationError({"issueCategory": "Loại sự cố không hợp lệ."})
+        old_priority = obj.priority
+        obj.priority = priority
+        obj.issue_category = category
+        obj.save(update_fields=["priority", "issue_category", "updated_at"])
+        note = str(request.data.get("note", "")).strip()
+        request_event(
+            obj,
+            request.user,
+            "Đánh giá phân loại & mức độ",
+            f"Loại: {IssueCategory(category).label} | Mức độ: {old_priority} -> {priority}"
+            + (f" | {note}" if note else ""),
+        )
+        resolve_suggestion(
+            obj, AISuggestionKind.TRIAGE, request.user, {"priority": priority, "category": category}
+        )
+        return Response(self.get_serializer(obj).data)
+
+    # ------------------------------------------------------------------
+    # Phân công người nghiệm thu công việc thuê ngoài
+    # ------------------------------------------------------------------
+    @action(detail=True, methods=["post"], url_path="assign-inspector")
+    @transaction.atomic
+    def assign_inspector(self, request, code=None):
+        obj = self._get_object()
+        require_role(request.user, Role.FACILITY_ADMIN)
+        if obj.repair_type != RepairType.EXTERNAL:
+            raise ValidationError({"repairType": "Chỉ phân công nghiệm thu cho công việc thuê ngoài."})
+        require_status(obj, *INSPECTOR_ASSIGNABLE_STATUSES)
+        if obj.status == RequestStatus.WAITING_FOR_ACCEPTANCE and obj.acceptance_result == "PASS":
+            raise ValidationError({"status": "Đã nghiệm thu đạt, không thể đổi người nghiệm thu."})
+        staff = User.objects.filter(
+            code=request.data.get("staffId"), role=Role.STAFF, is_active=True
+        ).first()
+        if staff is None:
+            raise ValidationError({"staffId": "Cán bộ nghiệm thu không tồn tại hoặc không hợp lệ."})
+        obj.acceptance_inspector = staff
+        obj.inspector_assigned_at = timezone.now()
+        obj.save(update_fields=["acceptance_inspector", "inspector_assigned_at", "updated_at"])
+        note = str(request.data.get("note", "")).strip()
+        request_event(
+            obj,
+            request.user,
+            "Phân công cán bộ nghiệm thu",
+            f"Giao nghiệm thu cho {staff.get_full_name() or staff.username}." + (f" {note}" if note else ""),
+            timeline_stage="Phân công nghiệm thu",
+        )
+        notify_role(
+            Role.STAFF,
+            "Bạn được phân công nghiệm thu",
+            f"{obj.code}: {obj.title}",
+            request=obj,
+            recipient=staff,
+        )
+        resolve_suggestion(
+            obj, AISuggestionKind.ASSIGN_INSPECTOR, request.user,
+            {"staff_code": staff.code, "staff_name": staff.get_full_name()},
+        )
+        return Response(self.get_serializer(obj).data)
+
+    # ------------------------------------------------------------------
+    # Trợ lý AI theo từng yêu cầu
+    # ------------------------------------------------------------------
+    @action(detail=True, methods=["get"], url_path="ai")
+    def ai_latest(self, request, code=None):
+        obj = self._get_object()
+        kinds = [kind for kind, rule in AI_REQUEST_RULES.items() if request.user.role in rule["roles"]]
+        latest = {}
+        for suggestion in obj.ai_suggestions.filter(kind__in=kinds).select_related("created_by", "decided_by"):
+            latest.setdefault(suggestion.kind, suggestion)
+        primary = AI_PRIMARY_KIND_BY_STATUS.get(obj.status)
+        available = sorted(
+            (kind for kind in kinds if ai_kind_allowed(kind, obj, request.user)),
+            key=lambda kind: 0 if kind == primary else 1,
+        )
+        return Response({
+            "available": available,
+            "latest": {kind: AISuggestionSerializer(s).data for kind, s in latest.items()},
+            "aiEnabled": gemini.is_configured(),
+        })
+
+    @action(detail=True, methods=["post"], url_path=r"ai/(?P<kind>[A-Za-z_-]+)")
+    def ai_suggest(self, request, code=None, kind=None):
+        obj = self._get_object()
+        kind = str(kind).upper().replace("-", "_")
+        if kind not in AI_REQUEST_RULES:
+            raise ValidationError({"kind": "Loại phân tích AI không hợp lệ."})
+        if request.user.role not in AI_REQUEST_RULES[kind]["roles"]:
+            raise PermissionDenied("Vai trò của bạn không dùng được loại phân tích này.")
+        if not ai_kind_allowed(kind, obj, request.user):
+            raise ValidationError({"status": "Trạng thái hiện tại không phù hợp với loại phân tích này."})
+        suggestion = generate_suggestion(kind, request.user, request_obj=obj)
+        return Response(AISuggestionSerializer(suggestion).data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=["post"])
     @transaction.atomic
     def cancel(self, request, code=None):
@@ -965,8 +1194,8 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Tính năng mô phỏng chỉ khả dụng ở môi trường phát triển.")
         obj = self._get_object()
         require_role(request.user, Role.STAFF)
-        if obj.assigned_staff_id != request.user.id:
-            raise PermissionDenied("Chỉ cán bộ được phân công mới được mô phỏng.")
+        if not is_effective_inspector(obj, request.user):
+            raise PermissionDenied("Chỉ cán bộ được phân công nghiệm thu mới được mô phỏng.")
         require_status(obj, RequestStatus.WAITING_REMEDIATION_RESPONSE)
         if not obj.remediation_deadline:
             raise ValidationError({"remediationDeadline": "Yêu cầu chưa có hạn khắc phục."})
@@ -989,7 +1218,9 @@ class RepairPlanViewSet(viewsets.ReadOnlyModelViewSet):
         if user.role == Role.REQUESTER:
             queryset = queryset.filter(request__requester=user)
         elif user.role == Role.STAFF:
-            queryset = queryset.filter(request__assigned_staff=user)
+            queryset = queryset.filter(
+                Q(request__assigned_staff=user) | Q(request__acceptance_inspector=user)
+            ).distinct()
         elif user.role == Role.PROCUREMENT:
             queryset = queryset.filter(request__external_works__isnull=False).distinct()
         status_value = self.request.query_params.get("approvalStatus")
@@ -1011,7 +1242,10 @@ class ExternalWorkViewSet(viewsets.ReadOnlyModelViewSet):
         if self.request.user.role == Role.REQUESTER:
             queryset = queryset.filter(request__requester=self.request.user)
         elif self.request.user.role == Role.STAFF:
-            queryset = queryset.filter(request__assigned_staff=self.request.user)
+            queryset = queryset.filter(
+                Q(request__assigned_staff=self.request.user)
+                | Q(request__acceptance_inspector=self.request.user)
+            ).distinct()
         status_value = self.request.query_params.get("status")
         if status_value:
             queryset = queryset.filter(status=status_value)
@@ -1151,3 +1385,137 @@ class ReportExportView(ReportSummaryView):
                 ]
             )
         return response
+
+
+# ======================================================================
+# Trợ lý AI - các API dùng chung
+# ======================================================================
+AI_LOG_ROLES = {Role.FACILITY_ADMIN, Role.DIRECTOR}
+
+
+class AIStatusView(APIView):
+    def get(self, request):
+        return Response({
+            "enabled": gemini.is_configured(),
+            "provider": "Google Gemini" if gemini.is_configured() else "Bộ luật dự phòng",
+            "models": settings.GEMINI_MODELS if gemini.is_configured() else [],
+            "canViewLog": request.user.role in AI_LOG_ROLES,
+        })
+
+
+class AIChatView(APIView):
+    def post(self, request):
+        message = str(request.data.get("message", "")).strip()
+        if not message:
+            raise ValidationError({"message": "Vui lòng nhập câu hỏi."})
+        if len(message) > 1000:
+            raise ValidationError({"message": "Câu hỏi tối đa 1000 ký tự."})
+        history = request.data.get("history") or []
+        if not isinstance(history, list):
+            history = []
+        clean_history = [
+            {"role": "user" if item.get("role") == "user" else "assistant", "content": str(item.get("content", ""))[:1500]}
+            for item in history[-6:]
+            if isinstance(item, dict)
+        ]
+        suggestion = generate_suggestion(
+            AISuggestionKind.CHAT, request.user, message=message, history=clean_history
+        )
+        return Response(AISuggestionSerializer(suggestion).data, status=status.HTTP_201_CREATED)
+
+
+class AITriagePreviewView(APIView):
+    """Gợi ý loại sự cố & mức độ khi người dùng đang soạn yêu cầu (chưa gửi)."""
+
+    def post(self, request):
+        title = str(request.data.get("title", "")).strip()
+        description = str(request.data.get("description", "")).strip()
+        if len(title) + len(description) < 8:
+            raise ValidationError({"description": "Vui lòng nhập tiêu đề hoặc mô tả sự cố trước khi nhờ AI gợi ý."})
+        draft = {
+            "title": title[:200],
+            "description": description[:2000],
+            "impact": str(request.data.get("impact", ""))[:500],
+            "facilityCode": str(request.data.get("facilityId", ""))[:30],
+            "facilityName": str(request.data.get("facilityName", ""))[:200],
+            "facilityType": str(request.data.get("facilityType", ""))[:100],
+            "building": str(request.data.get("building", ""))[:100],
+            "location": str(request.data.get("location", ""))[:200],
+            "selectedPriority": str(request.data.get("priority", ""))[:10],
+        }
+        draft = {key: value for key, value in draft.items() if value}
+        suggestion = generate_suggestion(AISuggestionKind.TRIAGE_PREVIEW, request.user, draft=draft)
+        return Response(AISuggestionSerializer(suggestion).data, status=status.HTTP_201_CREATED)
+
+
+class AISuggestionViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    serializer_class = AISuggestionSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = AISuggestion.objects.select_related("request", "created_by", "decided_by")
+        if user.role not in AI_LOG_ROLES:
+            queryset = queryset.filter(created_by=user)
+        for param, field in (("kind", "kind"), ("status", "status"), ("source", "source")):
+            value = self.request.query_params.get(param)
+            if value:
+                queryset = queryset.filter(**{field: value})
+        request_code = self.request.query_params.get("requestId")
+        if request_code:
+            queryset = queryset.filter(request__code=request_code)
+        return queryset
+
+    @action(detail=True, methods=["post"])
+    def dismiss(self, request, pk=None):
+        suggestion = self.get_object()
+        if suggestion.created_by_id != request.user.id and request.user.role not in AI_LOG_ROLES:
+            raise PermissionDenied("Bạn không thể thay đổi đề xuất này.")
+        if suggestion.status != AISuggestionStatus.PENDING:
+            raise ValidationError({"status": "Đề xuất này đã có quyết định."})
+        dismiss_suggestion(suggestion, request.user, str(request.data.get("note", "")).strip())
+        return Response(self.get_serializer(suggestion).data)
+
+
+class AIStatsView(APIView):
+    def get(self, request):
+        if request.user.role not in AI_LOG_ROLES:
+            raise PermissionDenied("Chỉ Quản trị CSVC và Ban Giám hiệu xem được thống kê AI.")
+        queryset = AISuggestion.objects.all()
+        kinds = []
+        for kind, label in AISuggestionKind.choices:
+            subset = queryset.filter(kind=kind)
+            counts = {row["status"]: row["n"] for row in subset.values("status").annotate(n=Count("id"))}
+            decided = sum(counts.get(s, 0) for s in (AISuggestionStatus.ACCEPTED, AISuggestionStatus.MODIFIED, AISuggestionStatus.REJECTED))
+            kinds.append({
+                "kind": kind,
+                "label": label,
+                "total": subset.count(),
+                "pending": counts.get(AISuggestionStatus.PENDING, 0),
+                "accepted": counts.get(AISuggestionStatus.ACCEPTED, 0),
+                "modified": counts.get(AISuggestionStatus.MODIFIED, 0),
+                "rejected": counts.get(AISuggestionStatus.REJECTED, 0),
+                "decided": decided,
+                "acceptanceRate": round(counts.get(AISuggestionStatus.ACCEPTED, 0) / decided, 3) if decided else None,
+                "avgLatencyMs": int(subset.aggregate(v=Avg("latency_ms"))["v"] or 0),
+            })
+        evaluated = queryset.exclude(kind=AISuggestionKind.CHAT)
+        accepted = evaluated.filter(status=AISuggestionStatus.ACCEPTED).count()
+        modified = evaluated.filter(status=AISuggestionStatus.MODIFIED).count()
+        rejected = evaluated.filter(status=AISuggestionStatus.REJECTED).count()
+        decided = accepted + modified + rejected
+        sources = {row["source"]: row["n"] for row in queryset.values("source").annotate(n=Count("id"))}
+        tool_calls = sum(len(trace or []) for trace in queryset.values_list("tool_trace", flat=True))
+        return Response({
+            "total": queryset.count(),
+            "decided": decided,
+            "accepted": accepted,
+            "modified": modified,
+            "rejected": rejected,
+            "acceptanceRate": round(accepted / decided, 3) if decided else None,
+            "agreementRate": round((accepted + modified) / decided, 3) if decided else None,
+            "avgLatencyMs": int(queryset.aggregate(v=Avg("latency_ms"))["v"] or 0),
+            "sources": sources,
+            "toolCalls": tool_calls,
+            "byKind": kinds,
+            "aiEnabled": gemini.is_configured(),
+        })

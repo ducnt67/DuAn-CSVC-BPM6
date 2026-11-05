@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
+import AiRequestDrawer, { AiRowButton } from '../../tro-ly-ai/thanh-phan/AiRequestDrawer';
 import { REQUEST_STATUS, EXTERNAL_WORK_STATUS, EXTERNAL_WORK_STATUS_LABELS } from '../../../dung-chung/hang-so/statuses';
 import { ROLES } from '../../../dung-chung/hang-so/roles';
 import { Truck, Eye, Edit, CheckCircle2, Clock, AlertTriangle, Paperclip } from 'lucide-react';
@@ -18,6 +19,7 @@ import { getEffectiveExternalWorkStatus } from '../dich-vu/externalWorkService';
 
 export default function ExternalWorkPage() {
   const { externalWorks, updateExternalWork, requests, updateRequest, currentUser, addToast } = useApp();
+  const [aiRequestId, setAiRequestId] = useState(null);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
@@ -253,6 +255,10 @@ export default function ExternalWorkPage() {
               </Button>
             )}
 
+            {isProcurement && ['PENDING', 'IN_PROGRESS'].includes(row.status) && (
+              <AiRowButton label="AI chọn nhà thầu" onClick={() => setAiRequestId(row.requestId)} />
+            )}
+
             {canMarkDone && (
               <Button
                 variant="primary"
@@ -318,6 +324,22 @@ export default function ExternalWorkPage() {
         emptyTitle="Chưa có công việc thuê ngoài nào"
         emptyDescription="Công việc sẽ xuất hiện tại đây khi phương án thuê ngoài được Ban Giám hiệu phê duyệt."
       />
+
+      {aiRequestId && (
+        <AiRequestDrawer
+          requestId={aiRequestId}
+          onClose={() => setAiRequestId(null)}
+          handlers={{
+            onApplyContractor: (name) => {
+              const work = externalWorks.find((w) => w.requestId === aiRequestId);
+              setAiRequestId(null);
+              if (!work) return;
+              openUpdateModal(work);
+              setFormData((prev) => ({ ...prev, contractor: name, workNotes: prev.workNotes || 'Chọn nhà thầu theo gợi ý của Trợ lý AI' }));
+            },
+          }}
+        />
+      )}
 
       {/* Update Contractor & Progress Modal */}
       <Modal

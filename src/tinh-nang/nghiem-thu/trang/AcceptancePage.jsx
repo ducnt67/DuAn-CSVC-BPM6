@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
+import AiRequestDrawer, { AiRowButton } from '../../tro-ly-ai/thanh-phan/AiRequestDrawer';
 import { REQUEST_STATUS } from '../../../dung-chung/hang-so/statuses';
 import { ROLES } from '../../../dung-chung/hang-so/roles';
 import {
@@ -28,6 +29,7 @@ import { formatDate, formatDateTime } from '../../../dung-chung/tien-ich/formatD
 
 export default function AcceptancePage() {
   const { requests, updateRequest, externalWorks, updateExternalWork, currentUser, addToast, setNotifications } = useApp();
+  const [aiRequestId, setAiRequestId] = useState(null);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
@@ -127,6 +129,10 @@ export default function AcceptancePage() {
     return requests.filter((r) => {
       // Must be external repair
       if (r.repairType !== 'EXTERNAL') return false;
+      // Cán bộ chỉ thấy việc mình nghiệm thu (được phân công, hoặc mặc định là người khảo sát)
+      if (currentUser?.role === ROLES.STAFF && (r.acceptanceInspectorId || r.assignedStaffId) !== currentUser.id) {
+        return false;
+      }
 
       if (search) {
         const q = search.toLowerCase();
@@ -166,7 +172,7 @@ export default function AcceptancePage() {
         REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS,
       ].includes(r.status);
     });
-  }, [requests, search, filterType]);
+  }, [requests, search, filterType, currentUser]);
 
   const openAcceptanceModal = (req, e) => {
     if (e) e.stopPropagation();
@@ -742,6 +748,10 @@ export default function AcceptancePage() {
               </Button>
             )}
 
+            {canInspect && row.acceptanceResult !== 'PASS' && (
+              <AiRowButton label="AI checklist" onClick={() => setAiRequestId(row.id)} />
+            )}
+
             {/* Confirm Completion Button */}
             {canConfirmDone && (
               <Button
@@ -848,6 +858,26 @@ export default function AcceptancePage() {
         emptyTitle="Không có công việc nào cần nghiệm thu"
         emptyDescription="Khi đơn vị thi công hoàn thành các hạng mục, hồ sơ sẽ chuyển tới đây để tổ chức nghiệm thu thực tế."
       />
+
+      {aiRequestId && (
+        <AiRequestDrawer
+          requestId={aiRequestId}
+          onClose={() => setAiRequestId(null)}
+          handlers={{
+            onApplyChecklist: (output) => {
+              const req = requests.find((r) => r.id === aiRequestId);
+              setAiRequestId(null);
+              if (!req) return;
+              openAcceptanceModal(req);
+              setAcceptanceForm((prev) => ({
+                ...prev,
+                checkItems: output.check_items.map((item) => `- ${item}`).join('\n'),
+                notes: '',
+              }));
+            },
+          }}
+        />
+      )}
 
       {/* Modal 1: Biên bản kiểm tra nghiệm thu thực tế */}
       <Modal

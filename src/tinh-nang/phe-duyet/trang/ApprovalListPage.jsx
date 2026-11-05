@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
 import { REQUEST_STATUS, REPAIR_TYPE, APPROVAL_STATUS } from '../../../dung-chung/hang-so/statuses';
@@ -11,6 +11,9 @@ import Modal from '../../../dung-chung/thanh-phan/Modal';
 import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import { formatCurrency } from '../../../dung-chung/tien-ich/formatCurrency';
 import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
+import AiRequestDrawer, { AiRowButton } from '../../tro-ly-ai/thanh-phan/AiRequestDrawer';
+import { listSuggestions } from '../../../ha-tang/api/aiService';
+import { AI_RECOMMENDATION_LABELS } from '../../../dung-chung/hang-so/issueCategories';
 
 export default function ApprovalListPage() {
   const {
@@ -24,6 +27,26 @@ export default function ApprovalListPage() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [aiRequestId, setAiRequestId] = useState(null);
+  const [aiBriefs, setAiBriefs] = useState({});
+
+  // Khuyến nghị gần nhất của Trợ lý AI cho từng yêu cầu (hiển thị ngay trên danh sách)
+  const loadAiBriefs = useCallback(async () => {
+    try {
+      const page = await listSuggestions({ kind: 'APPROVAL_BRIEF' });
+      const latest = {};
+      (page.results || []).forEach((s) => {
+        if (s.requestId && !latest[s.requestId]) latest[s.requestId] = s;
+      });
+      setAiBriefs(latest);
+    } catch {
+      setAiBriefs({});
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAiBriefs();
+  }, [loadAiBriefs, repairPlans]);
 
   // Filter plans by tab
   const filteredPlans = useMemo(() => {
@@ -163,6 +186,8 @@ export default function ApprovalListPage() {
     setDetailModalOpen(true);
   };
 
+  const AI_TONE = { APPROVE: 'success', APPROVE_WITH_CONDITIONS: 'warning', REVISE: 'danger', REJECT: 'danger' };
+
   const columns = [
     {
       title: 'Mã PA',
@@ -210,6 +235,29 @@ export default function ApprovalListPage() {
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>{formatDate(row.proposedAt)}</div>
         </div>
       ),
+    },
+    {
+      title: 'Trợ lý AI',
+      render: (_, row) => {
+        const brief = aiBriefs[row.requestId];
+        const isPendingRow = row.approvalStatus === APPROVAL_STATUS.PENDING;
+        if (!isPendingRow && !brief) return <span className="ai-rec-chip ai-rec-chip--none">—</span>;
+        const rec = brief?.output?.recommendation;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+            {brief ? (
+              <span className={`ai-rec-chip ai-rec-chip--${AI_TONE[rec] || 'none'}`} title={brief.output?.summary}>
+                {AI_RECOMMENDATION_LABELS[rec] || rec}
+              </span>
+            ) : (
+              <span className="ai-rec-chip ai-rec-chip--none">Chưa phân tích</span>
+            )}
+            {isPendingRow && (
+              <AiRowButton label={brief ? 'Xem phân tích' : 'AI phân tích'} onClick={() => setAiRequestId(row.requestId)} />
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Thao tác phê duyệt',
@@ -383,6 +431,16 @@ export default function ApprovalListPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {aiRequestId && (
+        <AiRequestDrawer
+          requestId={aiRequestId}
+          onClose={() => {
+            setAiRequestId(null);
+            loadAiBriefs();
+          }}
+        />
       )}
 
       {/* Reject Reason Modal */}

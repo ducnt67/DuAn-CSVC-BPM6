@@ -1,0 +1,62 @@
+.ai-log {
+  /* Bảng màu trạng thái cố định (good / warning / critical) + trung tính cho "chưa quyết định". */
+  --viz-good: #0ca30c;
+  --viz-warning: #fab219;
+  --viz-critical: #d03b3b;
+  --viz-neutral: #c9ced6;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ai-log .page-header { margin-bottom: 0 !important; }
+
+.ai-stat-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.ai-stat {
+  background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--shadow-sm);
+}
+.ai-stat__label { font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: 600; }
+.ai-stat__value { font-size: 1.75rem; line-height: 1.15; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.ai-stat__hint { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+
+.ai-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.ai-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid var(--color-border-light); }
+.ai-card__head h2 { margin: 0; font-size: var(--font-size-md); }
+.ai-count { color: var(--color-text-tertiary); font-weight: 500; }
+.ai-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.ai-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.ai-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.ai-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.ai-filters select { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 6px 10px; font: inherit; font-size: var(--font-size-sm); background: #fff; }
+
+.ai-table-wrap { overflow-x: auto; }
+.ai-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+.ai-table th { text-align: left; font-size: var(--font-size-xs); color: var(--color-text-tertiary); text-transform: uppercase; letter-spacing: 0.02em; padding: 10px 14px; background: var(--color-surface-muted); white-space: nowrap; }
+.ai-table td { padding: 10px 14px; border-top: 1px solid var(--color-border-light); vertical-align: top; }
+.ai-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ai-table .bar-col { width: 22%; min-width: 160px; vertical-align: middle; }
+.ai-table .nowrap { white-space: nowrap; }
+.ai-table .muted { font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: 2px; }
+.ai-table tr.is-open td { background: var(--ai-accent-soft); }
+.ai-log-summary { max-width: 420px; color: var(--color-text-secondary); }
+.ai-empty-row { text-align: center; color: var(--color-text-secondary); padding: 28px !important; }
+.ai-empty-row svg { vertical-align: -3px; color: var(--ai-accent); }
+
+/* Thanh phân đoạn mảnh: không in số trên thanh (số nằm ở các cột bên cạnh), khe 2px giữa các đoạn. */
+.ai-outcome-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--color-white); }
+.ai-outcome-bar span { display: block; min-width: 4px; }
+.ai-outcome-bar span:first-child { border-radius: 4px 0 0 4px; }
+.ai-outcome-bar span:last-child { border-radius: 0 4px 4px 0; }
+.ai-outcome-bar span:only-child { border-radius: 4px; }
+.ai-outcome-bar--empty { background: var(--color-surface-muted); }
+
+.ai-log-detail td { background: #fbfbff; }
+.ai-log-detail__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.ai-log-detail__grid > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ai-json { margin: 0; background: #0f172a; color: #e2e8f0; border-radius: var(--radius-md); padding: 10px 12px; font-size: 11px; max-height: 280px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+
+@media (max-width: 1100px) { .ai-stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .ai-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai-log-detail__grid { grid-template-columns: 1fr; }
+}

@@ -3,6 +3,26 @@ import { REQUEST_STATUS } from '../hang-so/statuses';
 
 /* ===== Request-level permission checks ===== */
 
+// Người nghiệm thu thực tế: cán bộ được phân công nghiệm thu, nếu chưa có thì là cán bộ khảo sát.
+export function getInspectorId(request) {
+  return request.acceptanceInspectorId || request.assignedStaffId;
+}
+
+export function canAssignInspector(request, currentUser) {
+  return (
+    request.repairType === 'EXTERNAL' &&
+    [
+      REQUEST_STATUS.WAITING_FOR_EXTERNAL_WORK,
+      REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS,
+      REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
+      REQUEST_STATUS.NEEDS_REMEDIATION,
+      REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE,
+    ].includes(request.status) &&
+    !(request.status === REQUEST_STATUS.WAITING_FOR_ACCEPTANCE && request.acceptanceResult === 'PASS') &&
+    currentUser.role === ROLES.FACILITY_ADMIN
+  );
+}
+
 export function canAcceptRequest(request, currentUser) {
   return (
     request.status === REQUEST_STATUS.NEW &&
@@ -81,7 +101,7 @@ export function canSubmitAcceptance(request, currentUser) {
     request.repairType === 'EXTERNAL' &&
     [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.NEEDS_REMEDIATION, REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE, REQUEST_STATUS.OVERDUE_REMEDIATION].includes(request.status) &&
     currentUser.role === ROLES.STAFF &&
-    currentUser.id === request.assignedStaffId
+    currentUser.id === getInspectorId(request)
   );
 }
 
@@ -91,7 +111,7 @@ export function canConfirmExternalCompletion(request, currentUser) {
     request.status === REQUEST_STATUS.WAITING_FOR_ACCEPTANCE &&
     request.acceptanceResult === 'PASS' &&
     currentUser.role === ROLES.STAFF &&
-    currentUser.id === request.assignedStaffId
+    currentUser.id === getInspectorId(request)
   );
 }
 

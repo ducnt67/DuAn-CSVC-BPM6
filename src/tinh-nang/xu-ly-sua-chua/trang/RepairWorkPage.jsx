@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
+import AiRequestDrawer, { AiRowButton } from '../../tro-ly-ai/thanh-phan/AiRequestDrawer';
 import { REQUEST_STATUS, REPAIR_TYPE, REPAIR_TYPE_LABELS } from '../../../dung-chung/hang-so/statuses';
 import { ROLES } from '../../../dung-chung/hang-so/roles';
 import { Wrench, Eye, CheckCircle2, CheckSquare, AlertTriangle } from 'lucide-react';
@@ -19,12 +20,17 @@ export default function RepairWorkPage() {
 
   const [search, setSearch] = useState('');
   const [taskCategory, setTaskCategory] = useState('ALL'); // ALL, SURVEY, INTERNAL, ACCEPTANCE
+  const [aiRequestId, setAiRequestId] = useState(null);
 
   // Staff's assigned requests
   const myAssignedRequests = useMemo(() => {
     return requests.filter((r) => {
       // If staff user is logged in, filter by assignedStaffId
-      if (currentUser?.role === ROLES.STAFF && r.assignedStaffId !== currentUser.id) {
+      if (
+        currentUser?.role === ROLES.STAFF &&
+        r.assignedStaffId !== currentUser.id &&
+        r.acceptanceInspectorId !== currentUser.id
+      ) {
         return false;
       }
       if (search) {
@@ -142,6 +148,14 @@ export default function RepairWorkPage() {
               </Button>
             )}
 
+            {currentUser?.role === ROLES.STAFF && (
+              (row.assignedStaffId === currentUser.id && [REQUEST_STATUS.ACCEPTED, REQUEST_STATUS.SURVEYING].includes(row.status)) ||
+              (row.repairType === 'EXTERNAL' && (row.acceptanceInspectorId || row.assignedStaffId) === currentUser.id &&
+                [REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, REQUEST_STATUS.NEEDS_REMEDIATION, REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE].includes(row.status) &&
+                row.acceptanceResult !== 'PASS')
+            ) && (
+              <AiRowButton onClick={() => setAiRequestId(row.id)} />
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -210,6 +224,8 @@ export default function RepairWorkPage() {
         emptyTitle="Không có công việc nào trong danh mục này"
         emptyDescription="Tất cả các nhiệm vụ đã được xử lý hoặc chưa được phân công thêm."
       />
+
+      {aiRequestId && <AiRequestDrawer requestId={aiRequestId} onClose={() => setAiRequestId(null)} />}
     </div>
   );
 }

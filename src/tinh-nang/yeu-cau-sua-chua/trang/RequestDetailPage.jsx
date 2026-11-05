@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
 import { REQUEST_STATUS, REPAIR_TYPE, APPROVAL_STATUS } from '../../../dung-chung/hang-so/statuses';
 import { ROLES, ROLE_LABELS } from '../../../dung-chung/hang-so/roles';
@@ -7,7 +7,7 @@ import {
   canAcceptRequest, canRequestInfo, canAssignStaff, canSurvey,
   canCreatePlan, canApprovePlan, canUpdateInternalResult,
   canConfirmInternalRepair, canSubmitAcceptance, canConfirmExternalCompletion,
-  canUpdateExternalWork, canSupplementInfo, canCancelRequest
+  canUpdateExternalWork, canSupplementInfo, canCancelRequest, canAssignInspector
 } from '../../../dung-chung/tien-ich/permissions';
 import {
   ArrowLeft, CheckCircle2, Clock, AlertTriangle, UserCheck,
@@ -26,6 +26,9 @@ import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import { formatDate } from '../../../dung-chung/tien-ich/formatDate';
 import { formatCurrency } from '../../../dung-chung/tien-ich/formatCurrency';
 import { generatePlanId, generateExternalWorkId } from '../../../dung-chung/tien-ich/generateId';
+import AiAssistantPanel from '../../tro-ly-ai/thanh-phan/AiAssistantPanel';
+import { assignInspector } from '../../../ha-tang/api/aiService';
+import { ISSUE_CATEGORY_LABELS } from '../../../dung-chung/hang-so/issueCategories';
 import './RequestDetailPage.css';
 
 export default function RequestDetailPage() {
@@ -35,7 +38,7 @@ export default function RequestDetailPage() {
     requests, updateRequest, currentUser, users,
     repairPlans, addRepairPlan, updateRepairPlan,
     externalWorks, addExternalWork, updateExternalWork,
-    addToast
+    addToast, refreshData
   } = useApp();
 
   const [activeTab, setActiveTab] = useState('overview'); // overview, survey_plan, work, acceptance, history
@@ -45,6 +48,8 @@ export default function RequestDetailPage() {
 
   // Modal form states
   const [assignData, setAssignData] = useState({ staffId: '', note: '' });
+  const [inspectorData, setInspectorData] = useState({ staffId: '', note: '' });
+  const [inspectorSaving, setInspectorSaving] = useState(false);
   const [requestInfoNote, setRequestInfoNote] = useState('');
   const [supplementNote, setSupplementNote] = useState('');
   const [surveyData, setSurveyData] = useState({
@@ -54,6 +59,8 @@ export default function RequestDetailPage() {
     damageLevel: 'Trung bình',
     recommendedAction: '',
     repairAction: 'IMMEDIATE',
+    estimatedCost: '',
+    estimatedTime: '',
   });
   const [planData, setPlanData] = useState({
     title: '',
@@ -135,6 +142,23 @@ export default function RequestDetailPage() {
     return { isReceived, receiverName, receivedAt };
   }, [request]);
 
+  // Mở form đã điền sẵn khi người dùng bấm "Áp dụng" trong khung Trợ lý AI ở trang danh sách
+  const location = useLocation();
+  useEffect(() => {
+    const apply = location.state?.aiApply;
+    if (!apply || !request) return;
+    navigate(location.pathname, { replace: true, state: null });
+    const appliers = {
+      PLAN: applyAiPlan,
+      SURVEY_ASSIST: applyAiSurvey,
+      ACCEPTANCE_CHECKLIST: applyAiChecklist,
+      CONTRACTOR: applyAiContractor,
+      REQUEST_INFO: applyAiRequestInfo,
+    };
+    appliers[apply.kind]?.(apply.output);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, request?.id]);
+
   if (!request) {
     return (
       <div style={{ textAlign: 'center', padding: '64px 16px' }}>
@@ -163,6 +187,7 @@ export default function RequestDetailPage() {
   const isReqAcceptanceSubmittable = canSubmitAcceptance(request, currentUser);
   const isReqExternalCompletionConfirmable = canConfirmExternalCompletion(request, currentUser);
   const isReqCancellable = canCancelRequest(request, currentUser);
+  const isReqInspectorAssignable = canAssignInspector(request, currentUser);
 
   // Helper to add audit history
   const createHistoryItem = (action, note) => ({
@@ -242,6 +267,78 @@ export default function RequestDetailPage() {
     addToast(`Đã phân công cho cán bộ ${staff.name}`, 'success');
     setModalType(null);
   };
+
+  // 2b. Quản trị CSVC: Phân công cán bộ nghiệm thu (thuê ngoài)
+  const handleAssignInspector = async () => {
+    if (!inspectorData.staffId) {
+      addToast('Vui lòng chọn cán bộ nghiệm thu', 'error');
+      return;
+    }
+    setInspectorSaving(true);
+    try {
+      await assignInspector(request.id, inspectorData.staffId, inspectorData.note);
+      await refreshData();
+      const staff = staffUsers.find((s) => s.id === inspectorData.staffId);
+      addToast(`Đã phân công ${staff?.name || 'cán bộ'} nghiệm thu`, 'success');
+      setModalType(null);
+    } catch (error) {
+      addToast(`Không phân công được: ${error.message}`, 'error');
+    } finally {
+      setInspectorSaving(false);
+    }
+  };
+
+  // ===== Áp dụng đề xuất của Trợ lý AI vào các form có sẵn (người dùng vẫn xem lại trước khi lưu) =====
+  function applyAiPlan(output) {
+    setPlanData({
+      title: output.title,
+      repairType: output.repair_type,
+      estimatedCost: output.estimated_cost,
+      estimatedDuration: output.estimated_duration,
+      materials: output.materials,
+      needsApproval: output.needs_approval,
+      description: output.description,
+    });
+    setModalType('plan');
+  }
+
+  function applyAiSurvey(output) {
+    const damageMap = { 'Nhẹ': 'Nhẹ (Khắc phục nhanh)', 'Trung bình': 'Trung bình', 'Nặng': 'Nghiêm trọng (Hỏng toàn bộ cụm)' };
+    setSurveyData((p) => ({
+      ...p,
+      rootCause: p.rootCause || (output.likely_causes?.length ? `Nghi do: ${output.likely_causes.join('; ')} (cần xác minh tại hiện trường)` : ''),
+      damageLevel: damageMap[output.damage_level] || p.damageLevel,
+      recommendedAction: output.recommended_action || p.recommendedAction,
+      repairAction: output.can_repair_immediately ? 'IMMEDIATE' : 'REPORT_TO_FACILITY',
+      estimatedCost: output.estimated_cost ?? p.estimatedCost,
+      estimatedTime: output.estimated_time || p.estimatedTime,
+    }));
+    setModalType('survey');
+  }
+
+  function applyAiChecklist(output) {
+    setAcceptanceData((p) => ({
+      ...p,
+      checkItems: output.check_items.map((item) => `- ${item}`).join('\n'),
+      notes: '',
+    }));
+    setModalType('acceptance');
+  }
+
+  function applyAiContractor(name) {
+    setExternalUpdateData({
+      contractor: name,
+      contractorContact: '',
+      progress: request.externalProgress || 0,
+      workNotes: 'Chọn nhà thầu theo gợi ý của Trợ lý AI',
+    });
+    setModalType('external_update');
+  }
+
+  function applyAiRequestInfo(questions) {
+    setRequestInfoNote(questions.map((q) => `- ${q}`).join('\n'));
+    setModalType('request_info');
+  }
 
   // 3. Quản trị CSVC: Yêu cầu bổ sung thông tin
   const handleRequestInfo = () => {
@@ -1048,6 +1145,19 @@ export default function RequestDetailPage() {
               </Button>
             )}
 
+            {isReqInspectorAssignable && (
+              <Button
+                variant="outline"
+                icon={CheckSquare}
+                onClick={() => {
+                  setInspectorData({ staffId: request.acceptanceInspectorId || staffUsers[0]?.id || '', note: '' });
+                  setModalType('assign_inspector');
+                }}
+              >
+                {request.acceptanceInspectorId && request.acceptanceInspectorId !== request.assignedStaffId ? 'Đổi người nghiệm thu' : 'Phân công người nghiệm thu'}
+              </Button>
+            )}
+
             {/* Director actions */}
             {isReqApprovable && (
               <>
@@ -1091,6 +1201,32 @@ export default function RequestDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Trợ lý AI: đề xuất theo vai trò & trạng thái, người dùng quyết định */}
+      <AiAssistantPanel
+        request={request}
+        currentUser={currentUser}
+        addToast={addToast}
+        onRefresh={refreshData}
+        onApplyAssign={isReqAssignable ? (staffCode) => {
+          setAssignData({ staffId: staffCode, note: 'Theo đề xuất của Trợ lý AI' });
+          setModalType('assign');
+        } : null}
+        onApplyPlan={applyAiPlan}
+        onApplySurvey={isReqSurveyable ? applyAiSurvey : null}
+        onApplyChecklist={isReqAcceptanceSubmittable ? applyAiChecklist : null}
+        onApplyContractor={isReqExternalUpdatable ? applyAiContractor : null}
+        onApprove={handleApprove}
+        onReject={(reason) => {
+          setRejectReason(reason || '');
+          setModalType('reject');
+        }}
+        onRequestInfo={isReqInfoRequestable ? applyAiRequestInfo : null}
+        onApplyInspector={isReqInspectorAssignable ? (staffCode) => {
+          setInspectorData({ staffId: staffCode, note: 'Theo đề xuất của Trợ lý AI' });
+          setModalType('assign_inspector');
+        } : null}
+      />
 
       {/* Visual Workflow Timeline Bar (BPM Stepper) */}
       <div className="bpm-workflow-card">
@@ -1575,10 +1711,31 @@ export default function RequestDetailPage() {
                       <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Cán bộ kỹ thuật phụ trách</div>
                       <div style={{ fontWeight: 600 }}>{request.assignedStaffName || 'Chưa phân công'}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                        {request.assignedStaffName ? 'Tổ Kỹ thuật - CSVC' : 'Đang chờ Quản trị CSVC phân công'}
+                        {request.assignedStaffName ? (assignedStaff?.department || 'Tổ Kỹ thuật - CSVC') : 'Đang chờ Quản trị CSVC phân công'}
                       </div>
                     </div>
                   </div>
+
+                  {request.issueCategory && (
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                      Loại sự cố: <strong style={{ color: 'var(--color-text)' }}>{ISSUE_CATEGORY_LABELS[request.issueCategory] || request.issueCategory}</strong>
+                    </div>
+                  )}
+
+                  {request.repairType === REPAIR_TYPE.EXTERNAL && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: '#F1EFFF', color: '#5B4FD6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CheckSquare size={18} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Cán bộ nghiệm thu</div>
+                        <div style={{ fontWeight: 600 }}>{request.acceptanceInspectorName || 'Chưa phân công'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
+                          {request.inspectorAssignedAt ? `Phân công ${formatDate(request.inspectorAssignedAt)}` : 'Mặc định: cán bộ đã khảo sát'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {request.repairType === REPAIR_TYPE.EXTERNAL && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1956,6 +2113,36 @@ export default function RequestDetailPage() {
         />
       </Modal>
 
+      {/* 1b. Modal Phân công cán bộ nghiệm thu (Facility Admin) */}
+      <Modal
+        isOpen={modalType === 'assign_inspector'}
+        onClose={() => setModalType(null)}
+        title="Phân công cán bộ nghiệm thu công việc thuê ngoài"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModalType(null)}>Hủy</Button>
+            <Button variant="primary" loading={inspectorSaving} onClick={handleAssignInspector}>Xác nhận phân công</Button>
+          </>
+        }
+      >
+        <Select
+          label="Chọn cán bộ nghiệm thu"
+          required
+          value={inspectorData.staffId}
+          onChange={(e) => setInspectorData((p) => ({ ...p, staffId: e.target.value }))}
+          options={staffUsers.map((s) => ({
+            value: s.id,
+            label: `${s.name} - ${s.department}${s.id === request.assignedStaffId ? ' (đã khảo sát)' : ''}`,
+          }))}
+        />
+        <Textarea
+          label="Ghi chú"
+          value={inspectorData.note}
+          onChange={(e) => setInspectorData((p) => ({ ...p, note: e.target.value }))}
+          placeholder="Nội dung cần kiểm tra kỹ khi nghiệm thu..."
+        />
+      </Modal>
+
       {/* 2. Modal Yêu cầu bổ sung thông tin (Facility Admin) */}
       <Modal
         isOpen={modalType === 'request_info'}
@@ -2041,6 +2228,20 @@ export default function RequestDetailPage() {
             value={surveyData.damageLevel}
             onChange={(e) => setSurveyData((p) => ({ ...p, damageLevel: e.target.value }))}
             options={['Nhẹ (Khắc phục nhanh)', 'Trung bình', 'Nghiêm trọng (Hỏng toàn bộ cụm)']}
+          />
+          <Input
+            label="Dự toán sơ bộ (VNĐ)"
+            type="number"
+            min="0"
+            value={surveyData.estimatedCost}
+            onChange={(e) => setSurveyData((p) => ({ ...p, estimatedCost: e.target.value }))}
+            placeholder="VD: 450000"
+          />
+          <Input
+            label="Thời gian xử lý dự kiến"
+            value={surveyData.estimatedTime}
+            onChange={(e) => setSurveyData((p) => ({ ...p, estimatedTime: e.target.value }))}
+            placeholder="VD: 3 giờ"
           />
         </div>
 

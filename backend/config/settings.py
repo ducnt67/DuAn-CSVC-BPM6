@@ -4,6 +4,21 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_dotenv(path):
+    """Nạp biến môi trường từ backend/.env khi chạy local (không ghi đè biến đã có)."""
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_dotenv(BASE_DIR / ".env")
+
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
     "development-only-secret-key-change-before-deployment",
@@ -140,3 +155,18 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+
+# ===== Trợ lý AI (Gemini agent) =====
+# GEMINI_API_KEY: đặt trong backend/.env (local) hoặc biến môi trường trên Render.
+# GEMINI_MODELS: danh sách model ưu tiên, phân tách bằng dấu phẩy; model sau dùng khi model trước quá tải.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODELS = [
+    model.strip()
+    for model in os.getenv(
+        "GEMINI_MODELS", "gemini-3-flash-preview,gemini-3.5-flash,gemini-3.1-flash-lite"
+    ).split(",")
+    if model.strip()
+]
+AI_REQUEST_TIMEOUT = int(os.getenv("AI_REQUEST_TIMEOUT", "45"))
+AI_AGENT_DEADLINE = int(os.getenv("AI_AGENT_DEADLINE", "90"))
+AI_MAX_TOOL_ROUNDS = int(os.getenv("AI_MAX_TOOL_ROUNDS", "5"))

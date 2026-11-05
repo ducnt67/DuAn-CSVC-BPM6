@@ -118,6 +118,18 @@ class RepairType(models.TextChoices):
     EXTERNAL = "EXTERNAL", "Thuê ngoài"
 
 
+class IssueCategory(models.TextChoices):
+    ELECTRICAL = "ELECTRICAL", "Điện"
+    HVAC = "HVAC", "Điều hòa - Điện lạnh"
+    PLUMBING = "PLUMBING", "Cấp thoát nước"
+    NETWORK_IT = "NETWORK_IT", "Mạng - CNTT"
+    AV_EQUIPMENT = "AV_EQUIPMENT", "Thiết bị trình chiếu - Âm thanh"
+    FURNITURE = "FURNITURE", "Nội thất"
+    BUILDING = "BUILDING", "Xây dựng - Cửa - Hạ tầng"
+    SANITATION = "SANITATION", "Vệ sinh - Môi trường"
+    OTHER = "OTHER", "Khác"
+
+
 class RepairRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code = models.CharField(max_length=30, unique=True, blank=True)
@@ -165,6 +177,20 @@ class RepairRequest(models.Model):
         limit_choices_to={"role": Role.STAFF},
     )
     assigned_at = models.DateTimeField(null=True, blank=True)
+    issue_category = models.CharField(
+        max_length=24, choices=IssueCategory.choices, blank=True,
+        help_text="Loại sự cố do Quản trị CSVC xác nhận (có thể theo đề xuất của Trợ lý AI).",
+    )
+    acceptance_inspector = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="inspection_assignments",
+        limit_choices_to={"role": Role.STAFF},
+        help_text="Cán bộ nghiệm thu công việc thuê ngoài; để trống = cán bộ khảo sát.",
+    )
+    inspector_assigned_at = models.DateTimeField(null=True, blank=True)
     needs_approval = models.BooleanField(default=False)
     estimated_cost = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     internal_repair_result = models.JSONField(default=dict, blank=True)
@@ -478,3 +504,62 @@ class ContractHandling(models.Model):
     processed_by = models.ForeignKey(User, on_delete=models.PROTECT)
     processed_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default="PROCESSED")
+
+
+class AISuggestionKind(models.TextChoices):
+    TRIAGE = "TRIAGE", "Phân loại & mức độ"
+    TRIAGE_PREVIEW = "TRIAGE_PREVIEW", "Gợi ý khi tạo yêu cầu"
+    ASSIGN_SURVEY = "ASSIGN_SURVEY", "Phân công khảo sát"
+    PLAN = "PLAN", "Gợi ý phương án"
+    APPROVAL_BRIEF = "APPROVAL_BRIEF", "Hỗ trợ phê duyệt"
+    ASSIGN_INSPECTOR = "ASSIGN_INSPECTOR", "Phân công nghiệm thu"
+    SURVEY_ASSIST = "SURVEY_ASSIST", "Hỗ trợ khảo sát"
+    ACCEPTANCE_CHECKLIST = "ACCEPTANCE_CHECKLIST", "Checklist nghiệm thu"
+    CONTRACTOR = "CONTRACTOR", "Gợi ý nhà thầu"
+    CHAT = "CHAT", "Hỏi đáp trợ lý"
+
+
+class AISuggestionStatus(models.TextChoices):
+    PENDING = "PENDING", "Chưa quyết định"
+    ACCEPTED = "ACCEPTED", "Chấp nhận"
+    MODIFIED = "MODIFIED", "Điều chỉnh"
+    REJECTED = "REJECTED", "Không theo"
+    NOT_APPLICABLE = "NOT_APPLICABLE", "Không áp dụng"
+
+
+class AISuggestion(models.Model):
+    """Nhật ký mỗi lần Trợ lý AI đưa ra đề xuất và quyết định cuối cùng của con người."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request = models.ForeignKey(
+        RepairRequest, null=True, blank=True, on_delete=models.CASCADE, related_name="ai_suggestions"
+    )
+    kind = models.CharField(max_length=24, choices=AISuggestionKind.choices)
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="ai_suggestions")
+    created_at = models.DateTimeField(auto_now_add=True)
+    prompt = models.TextField(blank=True)
+    source = models.CharField(max_length=20, default="rule")
+    model_name = models.CharField(max_length=80, blank=True)
+    output = models.JSONField(default=dict)
+    tool_trace = models.JSONField(default=list)
+    latency_ms = models.PositiveIntegerField(default=0)
+    error = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=16, choices=AISuggestionStatus.choices, default=AISuggestionStatus.PENDING
+    )
+    final_value = models.JSONField(default=dict, blank=True)
+    feedback_note = models.TextField(blank=True)
+    decided_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="ai_decisions"
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["request", "kind", "status"]),
+            models.Index(fields=["kind", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.kind} {self.request.code if self.request else ''} ({self.status})"
