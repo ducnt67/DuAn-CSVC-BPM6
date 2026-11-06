@@ -176,9 +176,6 @@
 }
 .skel-error__retry:hover { background: var(--color-due-blue-hover); }
 
-/* Nội dung thật hiện ra mượt sau skeleton */
-.page-ready { animation: skel-fade-in 260ms ease both; }
-
 @media (max-width: 992px) {
   .skel-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .skel-grid-2, .skel-grid-detail { grid-template-columns: 1fr; }
@@ -194,5 +191,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .skel { animation: none; background-image: none; }
-  .skel-page, .page-ready, .skel-slow { animation: none; }
+  .skel-page, .skel-slow { animation: none; }
 }
