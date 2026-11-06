@@ -41,9 +41,9 @@ Trong PowerShell đang ở thư mục `backend`, chạy:
 ```
 
 - `migrate` tạo/cập nhật cấu trúc database.
-- `seed_demo` tạo 6 tài khoản, 12 cơ sở vật chất và 8 yêu cầu mẫu để thử các bước nghiệp vụ.
+- `seed_demo` tạo các tài khoản demo, danh mục cơ sở vật chất và dữ liệu yêu cầu mẫu để thử các bước nghiệp vụ.
 - Database SQLite được lưu tại `backend\db.sqlite3`.
-- Không cần chạy lại seed mỗi lần mở web. Có thể chạy lại để bảo đảm tài khoản demo tồn tại; lệnh này đặt lại mật khẩu của 6 tài khoản demo về `123`, cập nhật danh mục cơ sở mẫu và không nhân đôi các yêu cầu mẫu đã có.
+- Không cần chạy lại seed mỗi lần mở web. Có thể chạy lại để bảo đảm tài khoản demo tồn tại; lệnh này đặt lại mật khẩu của các tài khoản demo về `123`, cập nhật danh mục cơ sở mẫu và không nhân đôi các yêu cầu mẫu đã có.
 
 Muốn đặt một mật khẩu khác cho các tài khoản demo:
 
@@ -65,10 +65,10 @@ Từ thư mục `backend`, chạy:
 
 ### Cửa sổ PowerShell thứ hai: frontend
 
-Mở cửa sổ terminal mới, chuyển về thư mục gốc dự án:
+Mở cửa sổ terminal mới, chuyển về thư mục gốc của repository (thư mục chứa `package.json`):
 
 ```powershell
-cd D:\HocTap\DuAn-CSVC-BPM6
+cd ..\
 npm install
 npm run dev
 ```
@@ -159,6 +159,16 @@ Python đang chạy không phải môi trường backend hoặc dependencies ch�
 
 Nếu chưa có `backend\.venv`, chạy `py -m venv .venv` trước.
 
+### Cấu hình trợ lý AI
+
+Các chức năng nghiệp vụ thông thường không cần API key AI. Muốn dùng chatbot và các gợi ý Gemini, tạo file `backend\.env` (không commit file này) và thêm:
+
+```env
+GEMINI_API_KEY=your_google_ai_studio_key
+```
+
+Có thể lấy key tại <https://aistudio.google.com/apikey>. Khi deploy, đặt biến `GEMINI_API_KEY` trong phần Environment Variables của nền tảng deploy.
+
 ### Không đăng nhập được hoặc web báo không kết nối được máy chủ
 
 1. Kiểm tra backend đang chạy tại `http://127.0.0.1:8000`.
@@ -179,6 +189,8 @@ Chạy từ thư mục `backend`:
 .\.venv\Scripts\python.exe manage.py test core
 .\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
 ```
+
+Ba lệnh trên phải lần lượt trả về `System check identified no issues`, test đạt và không tạo migration mới.
 
 ## 9. Database và triển khai
 
