@@ -33,7 +33,8 @@ export default function ApprovalListPage() {
   // Khuyến nghị gần nhất của Trợ lý AI cho từng yêu cầu (hiển thị ngay trên danh sách)
   const loadAiBriefs = useCallback(async () => {
     try {
-      const page = await listSuggestions({ kind: 'APPROVAL_BRIEF' });
+      // Chỉ lấy lần phân tích mới nhất của mỗi yêu cầu, để danh sách dài vẫn đủ nhãn khuyến nghị
+      const page = await listSuggestions({ kind: 'APPROVAL_BRIEF', latest: 1, page_size: 100 });
       const latest = {};
       (page.results || []).forEach((s) => {
         if (s.requestId && !latest[s.requestId]) latest[s.requestId] = s;
