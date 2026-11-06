@@ -829,11 +829,10 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             timeline_stage="Hoàn thành thi công thuê ngoài",
         )
         notify_role(
-            Role.STAFF,
-            "Công việc thuê ngoài chờ nghiệm thu",
-            f"{obj.code}: {obj.title}",
+            Role.FACILITY_ADMIN,
+            "Công việc thuê ngoài đã hoàn thành - chờ phân công nghiệm thu",
+            f"{obj.code}: {obj.title}. Vui lòng phân công cán bộ nghiệm thu.",
             request=obj,
-            recipient=effective_inspector(obj),
         )
         return Response(self.get_serializer(obj).data)
 
@@ -843,7 +842,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
         obj = self._get_object()
         require_role(request.user, Role.STAFF)
         if not is_effective_inspector(obj, request.user):
-            raise PermissionDenied("Chỉ cán bộ được phân công nghiệm thu mới được nghiệm thu.")
+            raise PermissionDenied("Bạn không có quyền nghiệm thu kết quả.")
         require_status(
             obj,
             RequestStatus.WAITING_FOR_ACCEPTANCE,

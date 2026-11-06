@@ -3,9 +3,9 @@ import { REQUEST_STATUS } from '../hang-so/statuses';
 
 /* ===== Request-level permission checks ===== */
 
-// Người nghiệm thu thực tế: cán bộ được phân công nghiệm thu, nếu chưa có thì là cán bộ khảo sát.
+// Người nghiệm thu thực tế: chỉ cán bộ được Quản trị CSVC phân công nghiệm thu.
 export function getInspectorId(request) {
-  return request.acceptanceInspectorId || request.assignedStaffId;
+  return request.acceptanceInspectorId;
 }
 
 export function canAssignInspector(request, currentUser) {

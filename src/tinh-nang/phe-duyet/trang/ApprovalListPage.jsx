@@ -60,7 +60,7 @@ export default function ApprovalListPage() {
   }, [repairPlans, activeTab]);
 
   // Handle Approve
-  const handleApprovePlan = (plan, e) => {
+  const handleApprovePlan = async (plan, e) => {
     if (e) e.stopPropagation();
     const relatedRequest = requests.find((r) => r.id === plan.requestId);
     const nextStatus =
@@ -94,7 +94,7 @@ export default function ApprovalListPage() {
         }
       }
 
-      updateRequest(relatedRequest.id, {
+      const saved = await updateRequest(relatedRequest.id, {
         status: nextStatus,
         approvalStatus: APPROVAL_STATUS.APPROVED,
         approvedBy: currentUser?.name || 'Ban Giám hiệu',
@@ -119,8 +119,8 @@ export default function ApprovalListPage() {
           },
         ],
       });
+      if (!saved) return;
     }
-
     addToast(`Đã phê duyệt phương án ${plan.id}`, 'success');
     if (detailModalOpen) setDetailModalOpen(false);
   };
@@ -134,7 +134,7 @@ export default function ApprovalListPage() {
   };
 
   // Confirm Reject with reason
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!rejectReason.trim()) {
       addToast('Bắt buộc phải nhập lý do từ chối', 'error');
       return;
@@ -150,7 +150,7 @@ export default function ApprovalListPage() {
     });
 
     if (relatedRequest) {
-      updateRequest(relatedRequest.id, {
+      const saved = await updateRequest(relatedRequest.id, {
         status: REQUEST_STATUS.WAITING_FOR_PLAN,
         approvalStatus: APPROVAL_STATUS.REJECTED,
         rejectionReason: rejectReason,
@@ -174,8 +174,8 @@ export default function ApprovalListPage() {
           },
         ],
       });
+      if (!saved) return;
     }
-
     addToast(`Đã từ chối phương án ${selectedPlan.id}`, 'warning');
     setRejectModalOpen(false);
     if (detailModalOpen) setDetailModalOpen(false);
@@ -475,4 +475,3 @@ export default function ApprovalListPage() {
     </div>
   );
 }
-

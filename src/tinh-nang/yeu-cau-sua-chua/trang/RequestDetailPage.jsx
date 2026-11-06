@@ -212,8 +212,8 @@ export default function RequestDetailPage() {
   /* ================= ACTION HANDLERS ================= */
 
   // 1. Quản trị CSVC: Tiếp nhận yêu cầu
-  const handleAccept = () => {
-    updateRequest(request.id, {
+  const handleAccept = async () => {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.ACCEPTED,
       timeline: [
         ...(request.timeline || []),
@@ -230,18 +230,20 @@ export default function RequestDetailPage() {
         createHistoryItem('Tiếp nhận yêu cầu', 'Hồ sơ sự cố hợp lệ, đã tiếp nhận vào hệ thống'),
       ],
     });
-    addToast('Đã tiếp nhận yêu cầu sửa chữa', 'success');
-    setModalType(null);
+    if (saved) {
+      addToast('Đã tiếp nhận yêu cầu sửa chữa', 'success');
+      setModalType(null);
+    }
   };
 
   // 2. Quản trị CSVC: Phân công cán bộ
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!assignData.staffId) {
       addToast('Vui lòng chọn cán bộ phụ trách', 'error');
       return;
     }
     const staff = staffUsers.find((s) => s.id === assignData.staffId);
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.SURVEYING,
       assignedStaffId: staff.id,
       assignedStaffName: staff.name,
@@ -264,8 +266,10 @@ export default function RequestDetailPage() {
         ),
       ],
     });
-    addToast(`Đã phân công cho cán bộ ${staff.name}`, 'success');
-    setModalType(null);
+    if (saved) {
+      addToast(`Đã phân công cho cán bộ ${staff.name}`, 'success');
+      setModalType(null);
+    }
   };
 
   // 2b. Quản trị CSVC: Phân công cán bộ nghiệm thu (thuê ngoài)
@@ -341,37 +345,41 @@ export default function RequestDetailPage() {
   }
 
   // 3. Quản trị CSVC: Yêu cầu bổ sung thông tin
-  const handleRequestInfo = () => {
+  const handleRequestInfo = async () => {
     if (!requestInfoNote.trim()) {
       addToast('Vui lòng nhập nội dung cần bổ sung', 'error');
       return;
     }
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.NEEDS_INFORMATION,
       history: [
         ...(request.history || []),
         createHistoryItem('Yêu cầu bổ sung thông tin', requestInfoNote),
       ],
     });
-    addToast('Đã gửi thông báo yêu cầu bổ sung thông tin tới người gửi', 'warning');
-    setModalType(null);
+    if (saved) {
+      addToast('Đã gửi thông báo yêu cầu bổ sung thông tin tới người gửi', 'warning');
+      setModalType(null);
+    }
   };
 
   // 4. Người yêu cầu: Bổ sung thông tin
-  const handleSupplement = () => {
+  const handleSupplement = async () => {
     if (!supplementNote.trim()) {
       addToast('Vui lòng nhập nội dung thông tin', 'error');
       return;
     }
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.ACCEPTED,
       history: [
         ...(request.history || []),
         createHistoryItem('Bổ sung thông tin', supplementNote),
       ],
     });
-    addToast('Đã cập nhật bổ sung thông tin thành công', 'success');
-    setModalType(null);
+    if (saved) {
+      addToast('Đã cập nhật bổ sung thông tin thành công', 'success');
+      setModalType(null);
+    }
   };
 
   // 5. Cán bộ: Ghi nhận khảo sát
@@ -487,7 +495,7 @@ export default function RequestDetailPage() {
   };
 
   // 7. Ban Giám hiệu: Phê duyệt phương án
-  const handleApprove = () => {
+  const handleApprove = async () => {
     const nextStatus =
       request.repairType === REPAIR_TYPE.INTERNAL
         ? REQUEST_STATUS.INTERNAL_REPAIR
@@ -518,7 +526,7 @@ export default function RequestDetailPage() {
       });
     }
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: nextStatus,
       approvalStatus: APPROVAL_STATUS.APPROVED,
       approvedBy: currentUser.name,
@@ -539,12 +547,14 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Phương án đã được Ban Giám hiệu phê duyệt', 'success');
-    setModalType(null);
+    if (saved) {
+      addToast('Phương án đã được Ban Giám hiệu phê duyệt', 'success');
+      setModalType(null);
+    }
   };
 
   // 8. Ban Giám hiệu: Từ chối phương án
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectReason.trim()) {
       addToast('Bắt buộc phải nhập lý do từ chối', 'error');
       return;
@@ -559,7 +569,7 @@ export default function RequestDetailPage() {
       });
     }
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.WAITING_FOR_PLAN,
       approvalStatus: APPROVAL_STATUS.REJECTED,
       rejectionReason: rejectReason,
@@ -579,18 +589,20 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Đã từ chối phương án và gửi phản hồi đến Quản trị CSVC', 'warning');
-    setModalType(null);
+    if (saved) {
+      addToast('Đã từ chối phương án và gửi phản hồi đến Quản trị CSVC', 'warning');
+      setModalType(null);
+    }
   };
 
   // 9. Cán bộ: Cập nhật kết quả sửa chữa nội bộ
-  const handleSaveInternalResult = () => {
+  const handleSaveInternalResult = async () => {
     if (!internalResultData.workDone.trim()) {
       addToast('Vui lòng mô tả công việc đã thực hiện', 'error');
       return;
     }
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.WAITING_FOR_CONFIRMATION,
       internalRepairResult: {
         ...internalResultData,
@@ -616,14 +628,16 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Đã cập nhật kết quả sửa chữa. Yêu cầu chuyển sang Chờ xác nhận.', 'success');
-    setModalType(null);
+    if (saved) {
+      addToast('Đã cập nhật kết quả sửa chữa. Yêu cầu chuyển sang Chờ xác nhận.', 'success');
+      setModalType(null);
+    }
   };
 
   // 10. Người yêu cầu: Xác nhận kết quả nội bộ
-  const handleRequesterConfirm = () => {
+  const handleRequesterConfirm = async () => {
     if (requesterConfirmData.result === 'PASS') {
-      updateRequest(request.id, {
+      const saved = await updateRequest(request.id, {
         status: REQUEST_STATUS.COMPLETED,
         completedAt: new Date().toISOString(),
         timeline: [
@@ -641,13 +655,14 @@ export default function RequestDetailPage() {
           createHistoryItem('Xác nhận hoàn thành', requesterConfirmData.feedback),
         ],
       });
+      if (!saved) return;
       addToast('Đã xác nhận hoàn thành sửa chữa!', 'success');
     } else {
       if (!requesterConfirmData.feedback.trim()) {
         addToast('Vui lòng nhập lý do chưa đạt', 'error');
         return;
       }
-      updateRequest(request.id, {
+      const saved = await updateRequest(request.id, {
         status: REQUEST_STATUS.INTERNAL_REPAIR,
         timeline: [
           ...(request.timeline || []),
@@ -664,13 +679,14 @@ export default function RequestDetailPage() {
           createHistoryItem('Phản hồi kết quả chưa đạt', requesterConfirmData.feedback),
         ],
       });
+      if (!saved) return;
       addToast('Đã gửi phản hồi yêu cầu kỹ thuật viên kiểm tra xử lý lại', 'warning');
     }
     setModalType(null);
   };
 
   // 11. BP Đầu tư, MS & XD: Tiếp nhận / Cập nhật tiến độ thuê ngoài
-  const handleUpdateExternalWork = () => {
+  const handleUpdateExternalWork = async () => {
     if (!externalUpdateData.contractor.trim()) {
       addToast('Vui lòng nhập tên đơn vị thi công', 'error');
       return;
@@ -685,7 +701,7 @@ export default function RequestDetailPage() {
       });
     }
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS,
       contractor: externalUpdateData.contractor,
       externalProgress: externalUpdateData.progress,
@@ -698,12 +714,14 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Đã cập nhật tiến độ công việc thuê ngoài', 'success');
-    setModalType(null);
+    if (saved) {
+      addToast('Đã cập nhật tiến độ công việc thuê ngoài', 'success');
+      setModalType(null);
+    }
   };
 
   // 12. BP Đầu tư, MS & XD: Báo cáo hoàn thành thi công (chuyển sang CHỜ NGHIỆM THU)
-  const handleMarkExternalWorkDone = () => {
+  const handleMarkExternalWorkDone = async () => {
     if (externalWork) {
       updateExternalWork(externalWork.id, {
         status: 'WAITING_ACCEPTANCE',
@@ -712,7 +730,7 @@ export default function RequestDetailPage() {
       });
     }
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
       externalProgress: 100,
       timeline: [
@@ -734,11 +752,11 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Đã chuyển công việc sang trạng thái Chờ nghiệm thu', 'success');
+    if (saved) addToast('Đã chuyển công việc sang trạng thái Chờ nghiệm thu', 'success');
   };
 
   // 13. Cán bộ phụ trách: Nghiệm thu thực tế (Pass or Fail)
-  const handleSubmitAcceptance = () => {
+  const handleSubmitAcceptance = async () => {
     if (!acceptanceData.checkItems.trim()) {
       addToast('Vui lòng nhập nội dung kiểm tra thực tế', 'error');
       return;
@@ -771,7 +789,7 @@ export default function RequestDetailPage() {
     ];
 
     if (acceptanceData.result === 'PASS') {
-      updateRequest(request.id, {
+      const saved = await updateRequest(request.id, {
         status: REQUEST_STATUS.WAITING_FOR_ACCEPTANCE, // Stays in waiting acceptance until final completion confirmed, or ready to confirm
         acceptanceResult: 'PASS',
         acceptanceRecords: [...(request.acceptanceRecords || []), inspectionRecord],
@@ -787,9 +805,10 @@ export default function RequestDetailPage() {
         ],
         history: newHistory,
       });
+      if (!saved) return;
       addToast('Đã ghi nhận nghiệm thu ĐẠT yêu cầu! Bạn có thể nhấn Xác nhận hoàn thành.', 'success');
     } else {
-      updateRequest(request.id, {
+      const saved = await updateRequest(request.id, {
         status: REQUEST_STATUS.NEEDS_REMEDIATION,
         acceptanceResult: 'FAIL',
         remediationNotes: acceptanceData.remediationNotes,
@@ -806,6 +825,7 @@ export default function RequestDetailPage() {
         ],
         history: newHistory,
       });
+      if (!saved) return;
       addToast('Đã ghi nhận nghiệm thu KHÔNG ĐẠT. Yêu cầu chuyển sang Cần khắc phục.', 'warning');
     }
 
@@ -813,13 +833,13 @@ export default function RequestDetailPage() {
   };
 
   // 14. Cán bộ phụ trách: Xác nhận hoàn thành sửa chữa thuê ngoài (CHỈ KHI NGHIỆM THU ĐẠT)
-  const handleConfirmExternalCompletion = () => {
+  const handleConfirmExternalCompletion = async () => {
     if (request.acceptanceResult !== 'PASS') {
       addToast('Không thể xác nhận hoàn thành khi chưa nghiệm thu ĐẠT yêu cầu', 'error');
       return;
     }
 
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.COMPLETED,
       completedAt: new Date().toISOString(),
       confirmedBy: currentUser.name,
@@ -842,7 +862,7 @@ export default function RequestDetailPage() {
       ],
     });
 
-    addToast('Yêu cầu sửa chữa đã được xác nhận HOÀN THÀNH!', 'success');
+    if (saved) addToast('Yêu cầu sửa chữa đã được xác nhận HOÀN THÀNH!', 'success');
   };
 
   const WORKFLOW_STAGES = [
@@ -1731,7 +1751,7 @@ export default function RequestDetailPage() {
                         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Cán bộ nghiệm thu</div>
                         <div style={{ fontWeight: 600 }}>{request.acceptanceInspectorName || 'Chưa phân công'}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                          {request.inspectorAssignedAt ? `Phân công ${formatDate(request.inspectorAssignedAt)}` : 'Mặc định: cán bộ đã khảo sát'}
+                          {request.inspectorAssignedAt ? `Phân công ${formatDate(request.inspectorAssignedAt)}` : 'Chưa phân công - cán bộ chưa được phép nghiệm thu'}
                         </div>
                       </div>
                     </div>

@@ -327,11 +327,11 @@ class RequestSerializer(serializers.ModelSerializer):
         return obj.assigned_staff.get_full_name() or obj.assigned_staff.username
 
     def get_acceptanceInspectorId(self, obj):
-        inspector = effective_inspector(obj) if obj.repair_type == "EXTERNAL" else None
+        inspector = obj.acceptance_inspector if obj.repair_type == "EXTERNAL" else None
         return inspector.code if inspector else None
 
     def get_acceptanceInspectorName(self, obj):
-        inspector = effective_inspector(obj) if obj.repair_type == "EXTERNAL" else None
+        inspector = obj.acceptance_inspector if obj.repair_type == "EXTERNAL" else None
         return (inspector.get_full_name() or inspector.username) if inspector else None
 
     def get_surveyData(self, obj):

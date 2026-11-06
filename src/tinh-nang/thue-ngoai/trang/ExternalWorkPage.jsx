@@ -64,7 +64,7 @@ export default function ExternalWorkPage() {
     setModalOpen(true);
   };
 
-  const handleSaveUpdate = () => {
+  const handleSaveUpdate = async () => {
     if (!formData.contractor.trim()) {
       addToast('Vui lòng nhập tên đơn vị thi công', 'error');
       return;
@@ -79,7 +79,7 @@ export default function ExternalWorkPage() {
 
     const relatedReq = requests.find((r) => r.id === selectedWork.requestId);
     if (relatedReq) {
-      updateRequest(relatedReq.id, {
+      const saved = await updateRequest(relatedReq.id, {
         status: REQUEST_STATUS.EXTERNAL_WORK_IN_PROGRESS,
         contractor: formData.contractor,
         externalProgress: formData.progress,
@@ -93,14 +93,14 @@ export default function ExternalWorkPage() {
           },
         ],
       });
+      if (!saved) return;
     }
-
     addToast(`Đã cập nhật công việc ${selectedWork.id}`, 'success');
     setModalOpen(false);
   };
 
   // Mark Completed by Contractor -> Send to Waiting Acceptance
-  const handleMarkDoneForAcceptance = (work, e) => {
+  const handleMarkDoneForAcceptance = async (work, e) => {
     if (e) e.stopPropagation();
 
     updateExternalWork(work.id, {
@@ -111,7 +111,7 @@ export default function ExternalWorkPage() {
 
     const relatedReq = requests.find((r) => r.id === work.requestId);
     if (relatedReq) {
-      updateRequest(relatedReq.id, {
+      const saved = await updateRequest(relatedReq.id, {
         status: REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
         externalProgress: 100,
         timeline: [
@@ -134,8 +134,8 @@ export default function ExternalWorkPage() {
           },
         ],
       });
+      if (!saved) return;
     }
-
     addToast(`Công việc ${work.id} đã chuyển sang Chờ nghiệm thu!`, 'success');
   };
 

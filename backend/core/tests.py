@@ -167,6 +167,24 @@ class RepairWorkflowTests(APITestCase):
                 "remediationNotes": "Cần thay linh kiện.",
             },
         )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.data["detail"], "Bạn không có quyền nghiệm thu kết quả.")
+        response = self.post_as(
+            self.admin,
+            f"/api/v1/requests/{obj.code}/assign-inspector/",
+            {"staffId": self.staff.code},
+        )
+        self.assertEqual(response.status_code, 200)
+        response = self.post_as(
+            self.staff,
+            f"/api/v1/requests/{obj.code}/acceptance/",
+            {
+                "inspectionDate": "2026-10-31",
+                "checkItems": "Kiểm tra chạy thử.",
+                "result": "FAIL",
+                "remediationNotes": "Cần thay linh kiện.",
+            },
+        )
         self.assertEqual(response.status_code, 200)
         obj.refresh_from_db()
         self.assertEqual(obj.status, RequestStatus.WAITING_REMEDIATION_RESPONSE)
