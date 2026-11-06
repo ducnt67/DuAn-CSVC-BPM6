@@ -58,8 +58,6 @@ export default function AppRoutes() {
               element={
                 isRequester ? (
                   <Navigate to="/my-requests" replace />
-                ) : isFacilityAdmin ? (
-                  <Navigate to="/requests" replace />
                 ) : isStaff ? (
                   <Navigate to="/repair-work" replace />
                 ) : (
