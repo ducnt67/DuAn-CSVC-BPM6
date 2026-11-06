@@ -103,6 +103,12 @@ export async function apiRequest(path, options = {}, canRefresh = true) {
   return data;
 }
 
+// Gọi trước một request nhẹ khi mở trang đăng nhập để server (Render gói miễn phí) kịp thức dậy
+// trong lúc người dùng nhập tài khoản.
+export function warmUpServer() {
+  fetch(`${API_BASE_URL}/health/`, { method: 'GET' }).catch(() => {});
+}
+
 export async function signIn(username, password, rememberMe = true) {
   clearTokens();
   const tokens = await apiRequest(

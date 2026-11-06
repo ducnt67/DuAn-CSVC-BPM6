@@ -80,19 +80,37 @@ function toApiPath(nextUrl) {
   }
 }
 
+const LIST_PAGE_SIZE = 200;
+
+// Tải toàn bộ danh sách: trang đầu lấy tối đa 200 bản ghi; nếu còn, các trang sau được tải song song
+// thay vì lần lượt từng trang 20 bản ghi như trước (mỗi trang là một vòng gọi mạng tới server).
 async function getAllPages(path) {
-  const results = [];
-  let next = path;
-  while (next) {
-    const page = await apiRequest(next);
-    if (Array.isArray(page)) return page;
-    if (!Array.isArray(page.results)) {
-      throw new Error(`Phản hồi danh sách từ ${path} không đúng định dạng.`);
-    }
-    results.push(...page.results);
-    next = toApiPath(page.next);
+  const separator = path.includes('?') ? '&' : '?';
+  const first = await apiRequest(`${path}${separator}page_size=${LIST_PAGE_SIZE}`);
+  if (Array.isArray(first)) return first;
+  if (!Array.isArray(first.results)) {
+    throw new Error(`Phản hồi danh sách từ ${path} không đúng định dạng.`);
   }
-  return results;
+  if (!first.next) return first.results;
+  const pageSize = first.results.length || LIST_PAGE_SIZE;
+  const totalPages = Math.ceil((first.count || 0) / pageSize);
+  if (totalPages <= 1) {
+    // Không biết tổng số trang: quay về cách tải lần lượt theo liên kết next.
+    const results = [...first.results];
+    let next = toApiPath(first.next);
+    while (next) {
+      const page = await apiRequest(next);
+      results.push(...page.results);
+      next = toApiPath(page.next);
+    }
+    return results;
+  }
+  const rest = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) =>
+      apiRequest(`${path}${separator}page_size=${pageSize}&page=${index + 2}`)
+    )
+  );
+  return [...first.results, ...rest.flatMap((page) => page.results || [])];
 }
 
 export async function loadBackendData() {

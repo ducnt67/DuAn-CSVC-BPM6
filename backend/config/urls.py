@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from core.auth_views import LogoutView, SessionTokenObtainPairSerializer
 from core.views import (
+    HealthView,
     AIChatView,
     AIStatsView,
     AIStatusView,
@@ -43,6 +44,7 @@ urlpatterns = [
     path("api/v1/auth/me/", CurrentUserView.as_view(), name="current-user"),
     path("api/v1/reports/summary/", ReportSummaryView.as_view(), name="report-summary"),
     path("api/v1/reports/export.csv", ReportExportView.as_view(), name="report-export"),
+    path("api/v1/health/", HealthView.as_view(), name="health"),
     path("api/v1/ai/status/", AIStatusView.as_view(), name="ai-status"),
     path("api/v1/ai/chat/", AIChatView.as_view(), name="ai-chat"),
     path("api/v1/ai/triage-preview/", AITriagePreviewView.as_view(), name="ai-triage-preview"),

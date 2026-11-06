@@ -341,7 +341,8 @@ class RequestSerializer(serializers.ModelSerializer):
             return None
 
     def get_attachments(self, obj):
-        return list(obj.attachments.values_list("file_name", flat=True))
+        # Dùng .all() để tận dụng prefetch_related (values_list luôn tạo truy vấn mới cho từng yêu cầu)
+        return [attachment.file_name for attachment in obj.attachments.all()]
 
     def get_acceptanceHistory(self, obj):
         return AcceptanceRecordSerializer(obj.acceptance_records.all(), many=True).data
@@ -365,11 +366,10 @@ class RequestSerializer(serializers.ModelSerializer):
         return plan.approved_at if plan else None
 
     def get_contractHandling(self, obj):
-        handling = (
-            ContractHandling.objects.select_related("processed_by")
-            .filter(request_id=obj.pk)
-            .first()
-        )
+        try:
+            handling = obj.contract_action  # đã select_related ở danh sách
+        except ContractHandling.DoesNotExist:
+            handling = None
         if handling is None:
             return None
         return {

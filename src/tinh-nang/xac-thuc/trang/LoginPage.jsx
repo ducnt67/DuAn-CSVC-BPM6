@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../../ung-dung/bo-cung-cap/AppContext';
+import { warmUpServer } from '../../../ha-tang/api/apiClient';
 import { ROLES, ROLE_LABELS } from '../../../dung-chung/hang-so/roles';
 import {
   Lock, User, Eye, EyeOff, LogIn,
@@ -22,6 +23,10 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    warmUpServer();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
