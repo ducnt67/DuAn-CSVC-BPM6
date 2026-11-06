@@ -232,15 +232,17 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
             "requester", "assigned_staff", "acceptance_inspector", "facility", "completed_by",
         )
         if self.action in {"list", "retrieve"}:
-            queryset = queryset.prefetch_related(
+            queryset = queryset.select_related("contract_action__processed_by").prefetch_related(
                 "attachments",
                 "history__actor",
                 "timeline__actor",
                 "acceptance_records__inspector",
                 "repair_plans__proposed_by",
                 "repair_plans__approved_by",
+                "repair_plans__rejected_by",
                 "repair_plans__approval_history__actor",
                 "external_works__history__actor",
+                "external_works__plan",
                 "survey__surveyor",
             )
         for param, field in (
@@ -1208,7 +1210,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
 
 class RepairPlanViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RepairPlanSerializer
-    queryset = RepairPlan.objects.select_related("request", "proposed_by", "approved_by").prefetch_related(
+    queryset = RepairPlan.objects.select_related("request", "proposed_by", "approved_by", "rejected_by").prefetch_related(
         "approval_history__actor"
     )
     lookup_field = "code"
@@ -1265,7 +1267,7 @@ class NotificationViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        return Notification.objects.filter(
+        return Notification.objects.select_related("request").filter(
             Q(recipient=user) | Q(recipient__isnull=True, target_role=user.role)
         ).distinct()
 
@@ -1447,6 +1449,16 @@ class AITriagePreviewView(APIView):
         draft = {key: value for key, value in draft.items() if value}
         suggestion = generate_suggestion(AISuggestionKind.TRIAGE_PREVIEW, request.user, draft=draft)
         return Response(AISuggestionSerializer(suggestion).data, status=status.HTTP_201_CREATED)
+
+
+class HealthView(APIView):
+    """Endpoint nhẹ để đánh thức server (Render gói miễn phí ngủ sau 15 phút không có truy cập)."""
+
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({"ok": True})
 
 
 class AISuggestionPagination(PageNumberPagination):
