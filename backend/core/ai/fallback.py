@@ -8,8 +8,10 @@ from core.ai.catalog import (
     HIGH_IMPACT_KEYWORDS,
     INTERNAL_APPROVAL_THRESHOLD,
     INTERNAL_COST_LIMIT,
+    ELECTRIC_POINT_KEYWORDS,
     LOW_IMPACT_KEYWORDS,
     SAFETY_KEYWORDS,
+    WATER_KEYWORDS,
     category_label,
     guess_category,
     matched_keywords,
@@ -47,10 +49,16 @@ def _priority_from_text(text):
     minor = matched_keywords(blob, LOW_IMPACT_KEYWORDS)
     if safety:
         return "URGENT", True, f"Có dấu hiệu nguy cơ mất an toàn ({', '.join(safety)})."
+    water = matched_keywords(blob, WATER_KEYWORDS)
+    electric = matched_keywords(blob, ELECTRIC_POINT_KEYWORDS)
+    if water and electric:
+        return "URGENT", True, (
+            f"Nước tiếp xúc thiết bị điện ({', '.join(water + electric)}): nguy cơ chập, giật điện - cần ngắt điện khu vực."
+        )
     if impact:
         return "HIGH", False, f"Thiết bị ngừng hoạt động/ảnh hưởng lớn ({', '.join(impact)})."
     if minor:
-        return "LOW", False, f"Hư hỏng nhỏ, chủ yếu thẩm mỹ ({', '.join(minor)})."
+        return "LOW", False, f"Hư hỏng nhỏ, chưa ảnh hưởng nhiều tới việc sử dụng ({', '.join(minor)})."
     return "MEDIUM", False, "Không có dấu hiệu nguy hiểm hay ngừng hoạt động hoàn toàn; xử lý sớm trong 24-48 giờ."
 
 
@@ -60,7 +68,7 @@ def triage(user, context, call_tool, kind="TRIAGE"):
     title = req.get("title") or draft.get("title", "")
     description = req.get("description") or draft.get("description", "")
     facility = req.get("facility") or {"code": draft.get("facilityCode"), "type": draft.get("facilityType")}
-    category, _ = guess_category(title, description, facility_type=facility.get("type") or "")
+    category, category_hits = guess_category(title, description, facility_type=facility.get("type") or "")
     priority, safety, reason = _priority_from_text(f"{title} {description} {req.get('impact', '') or draft.get('impact', '')}")
     if req.get("code"):
         similar = call_tool("find_similar_requests", {"code": req["code"]})
@@ -68,17 +76,23 @@ def triage(user, context, call_tool, kind="TRIAGE"):
         similar = call_tool("find_similar_requests", {"text": f"{title} {description}", "facility_code": facility.get("code") or ""})
     if facility.get("code"):
         history = call_tool("get_facility_history", {"facility_code": facility["code"]})
-        if not history.get("error") and history.get("recurring_issue") and priority in ("LOW", "MEDIUM"):
-            priority = "HIGH" if priority == "MEDIUM" else "MEDIUM"
-            reason += f" Thiết bị đã hỏng {history['requests_last_180_days']} lần trong 180 ngày nên nâng mức ưu tiên."
+        same_recent = 0 if history.get("error") else (history.get("recent_by_category") or {}).get(category, 0)
+        if same_recent >= 2 and priority == "MEDIUM":
+            # Chỉ nâng khi lặp lại cùng loại sự cố; hư hỏng nhỏ (LOW) không bị nâng.
+            priority = "HIGH"
+            reason += f" Thiết bị đã có {same_recent} sự cố cùng loại trong 180 ngày nên nâng mức ưu tiên."
     duplicates = [
         {"code": d["code"], "reason": f"Đang mở ({d['status_label']}), cùng thiết bị/mô tả tương tự."}
         for d in similar.get("possible_duplicates", [])
     ]
     short = len(description.strip()) < 25
+    vague = not category_hits and len(description.strip()) < 80
     questions = []
-    if short:
+    if short or vague:
         questions.append("Mô tả cụ thể hiện tượng hư hỏng (từ khi nào, mức độ, có nguy hiểm không)?")
+    if vague:
+        questions.append("Thiết bị hoặc bộ phận nào bị hỏng (đèn, điều hòa, máy chiếu, bàn ghế, cửa...)?")
+        questions.append("Sự cố có ảnh hưởng tới lịch học hoặc an toàn người sử dụng không?")
     if not (req.get("location") or draft.get("location")):
         questions.append("Vị trí chính xác (tầng, phòng) của sự cố?")
     summary = f"Đề xuất loại '{category_label(category)}', mức độ {priority}."

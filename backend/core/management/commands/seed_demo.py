@@ -51,6 +51,9 @@ FACILITIES = [
     ("CSVC-010", "Bàn ghế phòng học E201", "Nội thất", "Khu E", "Tầng 2, Phòng 201", "Phòng Quản trị"),
     ("CSVC-011", "Hệ thống mạng nội bộ Khu E", "Hệ thống mạng", "Khu E", "Tầng 1-4", "Trung tâm CNTT"),
     ("CSVC-012", "Ổ cắm điện phòng D301", "Thiết bị điện", "Khu D", "Tầng 3, Phòng 301", "Phòng Quản trị"),
+    ("CSVC-013", "Hội trường Khu A", "Hội trường", "Khu A", "Tầng 1, Hội trường", "Phòng Quản trị"),
+    ("CSVC-014", "Thư viện Khu B", "Thư viện", "Khu B", "Tầng 2, Phòng đọc", "Trung tâm Thông tin - Thư viện"),
+    ("CSVC-015", "Thang máy Khu E", "Thiết bị", "Khu E", "Sảnh tầng 1", "Phòng Quản trị"),
 ]
 
 SAMPLE_REQUESTS = [
@@ -282,7 +285,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--reset-ai-demo",
             action="store_true",
-            help="Xóa nhật ký AI và tạo lại các tình huống demo Trợ lý AI (YC-8101..YC-8105) về trạng thái ban đầu.",
+            help="Xóa nhật ký AI và tạo lại các tình huống demo Trợ lý AI (YC-8101..YC-8127) về trạng thái ban đầu.",
         )
 
     @transaction.atomic
@@ -555,7 +558,9 @@ class Command(BaseCommand):
             facility = facilities[facility_code]
             requester = users["U06"] if index % 3 == 0 else users["U01"]
             staff = users[staff_code]
-            created_at = now - timedelta(days=round(178 - index * 4.6, 1))
+            # 38 ca đầu trải đều 6 tháng gần nhất; các ca bổ sung sau đó nằm lùi xa hơn (7-9 tháng trước).
+            days_ago = 178 - index * 4.6 if index <= 38 else 200 + (index - 38) * 12
+            created_at = now - timedelta(days=round(days_ago, 1))
             completed_at = created_at + timedelta(days=duration + 1)
             external = repair_type == RepairType.EXTERNAL
             inspector = None
@@ -699,7 +704,10 @@ class Command(BaseCommand):
             requester = users[case["requester"]]
             created_at = now - timedelta(hours=case["hours_ago"])
             staff = users[case["staff"]] if case.get("staff") else None
+            inspector = users[case["inspector"]] if case.get("inspector") else None
             plan_data = case.get("plan")
+            work_data = case.get("work")
+            work_info = work_data if isinstance(work_data, dict) else {}
             obj = RepairRequest.objects.create(
                 code=case["code"],
                 **self._base_values(facility, requester, case["title"], case["description"], case["location"]),
@@ -711,6 +719,10 @@ class Command(BaseCommand):
                 repair_type=plan_data["repair_type"] if plan_data else None,
                 needs_approval=bool(plan_data),
                 estimated_cost=plan_data["cost"] if plan_data else None,
+                contractor=work_info.get("contractor", ""),
+                external_progress=work_info.get("progress", 0),
+                acceptance_inspector=inspector,
+                inspector_assigned_at=created_at + timedelta(hours=30) if inspector else None,
             )
             record_request_event(obj, requester, "Tạo yêu cầu", "Yêu cầu mẫu cho demo Trợ lý AI.", timeline_stage="Gửi yêu cầu")
             if case["status"] != "NEW":
@@ -744,19 +756,38 @@ class Command(BaseCommand):
                     approved_by=users["U04"] if plan_data.get("approved") else None,
                     approved_at=now - timedelta(hours=20) if plan_data.get("approved") else None,
                 )
+                record_request_event(
+                    obj, users["U02"], "Lập phương án xử lý", plan.title, timeline_stage="Lập phương án sửa chữa"
+                )
                 ApprovalAction.objects.create(plan=plan, actor=users["U02"], action="SUBMITTED", comments="Gửi phê duyệt")
                 if plan_data.get("approved"):
                     ApprovalAction.objects.create(plan=plan, actor=users["U04"], action="APPROVED", comments="Đồng ý phương án.")
                     record_request_event(obj, users["U04"], "Phê duyệt phương án", "Ban Giám hiệu đã phê duyệt phương án.")
-                if case.get("work"):
+                if work_data:
                     work = ExternalWork.objects.create(
                         code=f"TN-{case['code'][3:]}", request=obj, plan=plan, title=plan.title,
-                        status=ExternalWorkStatus.PENDING,
+                        contractor=work_info.get("contractor", ""),
+                        progress=work_info.get("progress", 0),
+                        status=work_info.get("status", ExternalWorkStatus.PENDING),
+                        work_result=work_info.get("result", ""),
+                        work_notes=work_info.get("notes", ""),
                     )
                     ExternalWorkEvent.objects.create(work=work, actor=users["U04"], action="Tiếp nhận công việc")
-                record_request_event(
-                    obj, users["U02"], "Lập phương án xử lý", plan.title, timeline_stage="Lập phương án sửa chữa"
-                )
+                    if work.contractor:
+                        ExternalWorkEvent.objects.create(
+                            work=work, actor=users["U05"], action="Cập nhật tiến độ",
+                            detail=f"Nhà thầu {work.contractor}, tiến độ {work.progress}%.",
+                        )
+                    if inspector:
+                        record_request_event(
+                            obj, users["U02"], "Phân công người nghiệm thu",
+                            f"Đã phân công {inspector.get_full_name()} nghiệm thu.", timeline_stage="Phân công nghiệm thu",
+                        )
+                    if work.status == ExternalWorkStatus.WAITING_ACCEPTANCE:
+                        record_request_event(
+                            obj, users["U05"], "Nhà thầu hoàn thành thi công", work.work_result,
+                            timeline_stage="Hoàn thành thi công thuê ngoài",
+                        )
                 if not plan_data.get("approved"):
                     Notification.objects.get_or_create(
                         request=obj, target_role=Role.DIRECTOR, title="Phương án chờ phê duyệt",
