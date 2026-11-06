@@ -33,7 +33,7 @@ export function normalizeFacility(facility) {
   };
 }
 
-function normalizeRequest(request) {
+export function normalizeRequest(request) {
   const result = {
     ...request,
     survey: request.survey || request.surveyData || null,
@@ -133,6 +133,13 @@ export async function loadBackendData() {
       targetId: item.targetId || null,
     })),
   };
+}
+
+export async function loadNotifications() {
+  return (await getAllPages('/notifications/')).map((item) => ({
+    ...item,
+    targetId: item.targetId || null,
+  }));
 }
 
 export async function createRequest(request) {

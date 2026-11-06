@@ -11,6 +11,8 @@ import {
   createPendingPlanMap,
   createRequest as createBackendRequest,
   loadBackendData,
+  loadNotifications,
+  normalizeRequest,
   normalizeUser,
   persistNotificationChanges,
   persistRequestUpdate,
@@ -97,6 +99,29 @@ export function AppProvider({ children }) {
     setDataStatus('ready');
     return snapshot;
   }, [applySnapshot]);
+
+  const applyRequestUpdate = useCallback((updatedRequest) => {
+    const request = normalizeRequest(updatedRequest);
+    requestsRef.current = requestsRef.current.map((item) =>
+      item.id === request.id ? request : item
+    );
+    setRequests(requestsRef.current);
+
+    if (Array.isArray(request.repairPlans)) {
+      const requestIds = new Set(request.repairPlans.map((plan) => plan.requestId));
+      setRepairPlans((previous) => [
+        ...previous.filter((plan) => !requestIds.has(plan.requestId)),
+        ...request.repairPlans,
+      ]);
+    }
+    if (Array.isArray(request.externalWorks)) {
+      const requestIds = new Set(request.externalWorks.map((work) => work.requestId));
+      setExternalWorks((previous) => [
+        ...previous.filter((work) => !requestIds.has(work.requestId)),
+        ...request.externalWorks,
+      ]);
+    }
+  }, []);
 
   // Tải dữ liệu nền sau khi đã vào trang; lần gọi mới hơn (hoặc đăng xuất) sẽ bỏ qua kết quả cũ.
   const loadInitialData = useCallback(async () => {
@@ -200,13 +225,24 @@ export function AppProvider({ children }) {
       return false;
     }
     try {
-      await persistRequestUpdate(
+      const updatedRequest = await persistRequestUpdate(
         request,
         updates,
         pendingPlansRef.current,
         pendingWorksRef.current
       );
-      await refreshData();
+      applyRequestUpdate(updatedRequest);
+      loadNotifications()
+        .then((items) => {
+          notificationsRef.current = items;
+          setNotificationsState(items);
+        })
+        .catch((error) => {
+          addToast(
+            `Không tải lại được thông báo: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
+            'error'
+          );
+        });
       succeeded = true;
       return true;
     } catch (error) {
@@ -221,7 +257,7 @@ export function AppProvider({ children }) {
       activeRequestMutationsRef.current.delete(id);
       finishMutation(succeeded);
     }
-  }, [addToast, beginMutation, finishMutation, refreshData]);
+  }, [addToast, applyRequestUpdate, beginMutation, finishMutation]);
 
   const addRequest = useCallback(async (request) => {
     beginMutation();
