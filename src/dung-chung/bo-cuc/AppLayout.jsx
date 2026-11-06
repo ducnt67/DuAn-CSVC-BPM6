@@ -66,10 +66,10 @@ export default function AppLayout() {
 
       <div className={`main-wrapper ${desktopCollapsed ? 'sidebar-collapsed' : ''}`}>
         <main className="main-content">
+          {/* Không bọc Outlet trong khối có animation/transform/opacity: khối đó sẽ thành khung chứa
+              và lớp xếp chồng riêng, làm Modal (position: fixed) bị lệch và bị header/sidebar che. */}
           {dataStatus === 'ready' || SELF_LOADING_PATHS.includes(pathname) ? (
-            <div className="page-ready" key={pathname}>
-              <Outlet />
-            </div>
+            <Outlet />
           ) : (
             <PageSkeleton
               {...skeletonFor(pathname)}
