@@ -1,0 +1,52 @@
+/* ===== Trạng thái đang đăng nhập ===== */
+.login-spin { animation: login-spin 0.8s linear infinite; }
+@keyframes login-spin { to { transform: rotate(360deg); } }
+
+.login-submit { position: relative; overflow: hidden; }
+.login-submit.is-loading { background-color: var(--color-due-blue-hover) !important; cursor: progress !important; }
+
+/* Thanh tiến trình chạy dọc mép dưới nút */
+.login-submit__bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 38%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(255, 184, 108, 0), #ffb86c, rgba(255, 184, 108, 0));
+  animation: login-bar 1.1s ease-in-out infinite;
+}
+@keyframes login-bar {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(290%); }
+}
+
+.login-form.is-loading input:not([type='checkbox']) {
+  background-color: #f6f8fb;
+  color: var(--color-text-secondary);
+}
+
+.login-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-due-blue-light);
+  border: 1px solid #c6def3;
+  color: var(--color-due-blue-dark);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  animation: login-fade 260ms ease both;
+}
+.login-hint svg { flex-shrink: 0; margin-top: 1px; }
+@keyframes login-fade { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+
+.login-demo-btn { display: inline-flex; align-items: center; gap: 5px; }
+.login-demo-btn:disabled { opacity: 0.55; cursor: not-allowed !important; }
+.login-demo-btn.is-loading { opacity: 1; cursor: progress !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-spin, .login-submit__bar, .login-hint { animation: none; }
+  .login-submit__bar { width: 100%; opacity: 0.6; }
+}
