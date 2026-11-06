@@ -26,6 +26,7 @@ import Modal from '../../../dung-chung/thanh-phan/Modal';
 import Input from '../../../dung-chung/thanh-phan/Input';
 import Textarea from '../../../dung-chung/thanh-phan/Textarea';
 import { formatDate, formatDateTime } from '../../../dung-chung/tien-ich/formatDate';
+import { canSubmitAcceptance, canConfirmExternalCompletion } from '../../../dung-chung/tien-ich/permissions';
 
 export default function AcceptancePage() {
   const { requests, updateRequest, externalWorks, updateExternalWork, currentUser, addToast, setNotifications } = useApp();
@@ -129,8 +130,8 @@ export default function AcceptancePage() {
     return requests.filter((r) => {
       // Must be external repair
       if (r.repairType !== 'EXTERNAL') return false;
-      // Cán bộ chỉ thấy việc mình nghiệm thu (được phân công, hoặc mặc định là người khảo sát)
-      if (currentUser?.role === ROLES.STAFF && (r.acceptanceInspectorId || r.assignedStaffId) !== currentUser.id) {
+      // Cán bộ chỉ thấy việc mình được Quản trị CSVC phân công nghiệm thu.
+      if (currentUser?.role === ROLES.STAFF && r.acceptanceInspectorId !== currentUser.id) {
         return false;
       }
 
@@ -195,7 +196,12 @@ export default function AcceptancePage() {
 
   // Submit Acceptance Inspection
   // Rule: "Sau khi ghi nhận Không đạt thì chờ 72 giờ cho bên nhà cung cấp khắc phục"
-  const handleSubmitAcceptance = () => {
+  const handleSubmitAcceptance = async () => {
+    if (!selectedRequest || !canSubmitAcceptance(selectedRequest, currentUser)) {
+      addToast('Bạn không có quyền nghiệm thu kết quả', 'error');
+      return;
+    }
+
     if (!acceptanceForm.checkItems.trim()) {
       addToast('Vui lòng nhập nội dung kiểm tra thực tế', 'error');
       return;
@@ -221,7 +227,7 @@ export default function AcceptancePage() {
     const newRecords = [...(selectedRequest.acceptanceRecords || []), inspectionRecord];
 
     if (acceptanceForm.result === 'PASS') {
-      updateRequest(selectedRequest.id, {
+      const saved = await updateRequest(selectedRequest.id, {
         status: REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
         acceptanceResult: 'PASS',
         acceptanceRecords: newRecords,
@@ -245,12 +251,13 @@ export default function AcceptancePage() {
           },
         ],
       });
+      if (!saved) return;
       addToast('Đã ghi nhận nghiệm thu ĐẠT! Bạn có thể nhấn Xác nhận hoàn thành.', 'success');
     } else {
       // KHÔNG ĐẠT: Chờ 72 giờ cho nhà cung cấp khắc phục
       const deadline72h = new Date(now.getTime() + 72 * 60 * 60 * 1000).toISOString();
 
-      updateRequest(selectedRequest.id, {
+      const saved = await updateRequest(selectedRequest.id, {
         status: REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE,
         acceptanceResult: 'FAIL',
         remediationNotes: acceptanceForm.remediationNotes,
@@ -291,6 +298,7 @@ export default function AcceptancePage() {
         });
       }
 
+      if (!saved) return;
       setNotifications((previous) => [
         {
           id: `NTF-${Date.now()}`,
@@ -349,7 +357,7 @@ export default function AcceptancePage() {
   };
 
   // Submit: Cập nhật sau 72h & Lưu phương án xử lý hợp đồng
-  const handleSaveContractHandling = () => {
+  const handleSaveContractHandling = async () => {
     if (contractForm.actions.length === 0) {
       addToast('Vui lòng chọn ít nhất một biện pháp xử lý theo hợp đồng', 'error');
       return;
@@ -368,7 +376,7 @@ export default function AcceptancePage() {
       status: 'PROCESSED',
     };
 
-    updateRequest(selectedRequest.id, {
+    const saved = await updateRequest(selectedRequest.id, {
       status: REQUEST_STATUS.OVERDUE_REMEDIATION,
       contractHandling,
       remediationStatus: 'OVERDUE_FAILED',
@@ -397,6 +405,7 @@ export default function AcceptancePage() {
       ],
     });
 
+    if (!saved) return;
     const relatedWork = externalWorks.find((work) => work.requestId === selectedRequest.id);
     if (relatedWork) {
       updateExternalWork(relatedWork.id, {
@@ -434,14 +443,14 @@ export default function AcceptancePage() {
   };
 
   // Submit: Nhà cung cấp đã hoàn thành khắc phục -> chuyển sang chờ nghiệm thu lại
-  const handleProviderResponse = () => {
+  const handleProviderResponse = async () => {
     if (!providerResponseForm.responseNote.trim()) {
       addToast('Vui lòng nhập nội dung thông báo từ nhà cung cấp', 'error');
       return;
     }
 
     const now = new Date();
-    updateRequest(selectedRequest.id, {
+    const saved = await updateRequest(selectedRequest.id, {
       status: REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
       remediationResponseReceived: true,
       remediationResponseDate: providerResponseForm.responseDate,
@@ -468,6 +477,7 @@ export default function AcceptancePage() {
       ],
     });
 
+    if (!saved) return;
     const relatedWork = externalWorks.find((work) => work.requestId === selectedRequest.id);
     if (relatedWork) {
       updateExternalWork(relatedWork.id, {
@@ -481,18 +491,23 @@ export default function AcceptancePage() {
   };
 
   // Demo Fast-forward: Mô phỏng hết 72 giờ
-  const handleSimulateOverdue72h = (req, e) => {
+  const handleSimulateOverdue72h = async (req, e) => {
     if (e) e.stopPropagation();
     const pastDeadline = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
-    updateRequest(req.id, {
+    const saved = await updateRequest(req.id, {
       remediationDeadline: pastDeadline,
     });
-    addToast(`[Mô phỏng] Đã chỉnh thời hạn ${req.id} sang trạng thái: Đã hết 72 giờ!`, 'info');
+    if (saved) addToast(`[Mô phỏng] Đã chỉnh thời hạn ${req.id} sang trạng thái: Đã hết 72 giờ!`, 'info');
   };
 
   // Confirm Completion by Staff (ONLY IF PASS)
-  const handleConfirmCompletion = (req, e) => {
+  const handleConfirmCompletion = async (req, e) => {
     if (e) e.stopPropagation();
+
+    if (!canConfirmExternalCompletion(req, currentUser)) {
+      addToast('Bạn không có quyền nghiệm thu kết quả', 'error');
+      return;
+    }
 
     if (req.acceptanceResult !== 'PASS') {
       addToast('Không thể xác nhận hoàn thành khi chưa nghiệm thu ĐẠT yêu cầu', 'error');
@@ -500,7 +515,7 @@ export default function AcceptancePage() {
     }
 
     const now = new Date();
-    updateRequest(req.id, {
+    const saved = await updateRequest(req.id, {
       status: REQUEST_STATUS.COMPLETED,
       completedAt: now.toISOString(),
       confirmedBy: currentUser.name,
@@ -525,7 +540,7 @@ export default function AcceptancePage() {
       ],
     });
 
-    addToast(`Yêu cầu ${req.id} đã được xác nhận HOÀN THÀNH!`, 'success');
+    if (saved) addToast(`Yêu cầu ${req.id} đã được xác nhận HOÀN THÀNH!`, 'success');
   };
 
   const columns = [
@@ -649,13 +664,7 @@ export default function AcceptancePage() {
         const deadlineInfo = getDeadlineInfo(row);
 
         // Can inspect: Waiting for acceptance, or needs remediation re-inspection
-        const canInspect =
-          isStaff &&
-          [
-            REQUEST_STATUS.WAITING_FOR_ACCEPTANCE,
-            REQUEST_STATUS.WAITING_REMEDIATION_RESPONSE,
-            REQUEST_STATUS.NEEDS_REMEDIATION,
-          ].includes(row.status);
+        const canInspect = canSubmitAcceptance(row, currentUser);
 
         // Waiting in 72h window
         const isWaiting72h =
@@ -670,10 +679,7 @@ export default function AcceptancePage() {
           (isWaiting72h || row.status === REQUEST_STATUS.OVERDUE_REMEDIATION);
 
         // Can confirm completion: PASS and in WAITING_FOR_ACCEPTANCE
-        const canConfirmDone =
-          isStaff &&
-          row.status === REQUEST_STATUS.WAITING_FOR_ACCEPTANCE &&
-          row.acceptanceResult === 'PASS';
+        const canConfirmDone = canConfirmExternalCompletion(row, currentUser);
 
         const hasHistory = row.acceptanceRecords?.length > 0;
 

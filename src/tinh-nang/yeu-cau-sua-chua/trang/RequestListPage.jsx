@@ -75,9 +75,9 @@ export default function RequestListPage() {
   };
 
   // Quick Accept Action (for Facility Admin)
-  const handleQuickAccept = (request, e) => {
+  const handleQuickAccept = async (request, e) => {
     e.stopPropagation();
-    updateRequest(request.id, {
+    const saved = await updateRequest(request.id, {
       status: REQUEST_STATUS.ACCEPTED,
       timeline: [
         ...(request.timeline || []),
@@ -99,7 +99,7 @@ export default function RequestListPage() {
         },
       ],
     });
-    addToast(`Đã tiếp nhận yêu cầu ${request.id}`, 'success');
+    if (saved) addToast(`Đã tiếp nhận yêu cầu ${request.id}`, 'success');
   };
 
   // Open Assign Modal
@@ -112,13 +112,13 @@ export default function RequestListPage() {
   };
 
   // Save Assignment
-  const handleSaveAssignment = () => {
+  const handleSaveAssignment = async () => {
     if (!selectedStaffId) {
       addToast('Vui lòng chọn cán bộ phụ trách', 'error');
       return;
     }
     const staff = staffUsers.find((s) => s.id === selectedStaffId);
-    updateRequest(selectedRequest.id, {
+    const saved = await updateRequest(selectedRequest.id, {
       status: REQUEST_STATUS.SURVEYING,
       assignedStaffId: staff.id,
       assignedStaffName: staff.name,
@@ -143,8 +143,10 @@ export default function RequestListPage() {
         },
       ],
     });
-    addToast(`Đã phân công ${staff.name} phụ trách ${selectedRequest.id}`, 'success');
-    setAssignModalOpen(false);
+    if (saved) {
+      addToast(`Đã phân công ${staff.name} phụ trách ${selectedRequest.id}`, 'success');
+      setAssignModalOpen(false);
+    }
   };
 
   const columns = [
@@ -412,4 +414,3 @@ export default function RequestListPage() {
     </div>
   );
 }
-

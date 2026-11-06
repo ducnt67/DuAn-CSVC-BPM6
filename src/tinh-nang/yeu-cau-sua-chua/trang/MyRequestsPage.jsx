@@ -154,11 +154,11 @@ export default function MyRequestsPage() {
   }, [myAllRequests, search, buildingFilter, facilityFilter, statusGroupFilter]);
 
   // Handle Requester Confirmation (Satisfied or Not)
-  const handleConfirmInternal = () => {
+  const handleConfirmInternal = async () => {
     if (!selectedRequest) return;
 
     if (confirmResult === 'PASS') {
-      updateRequest(selectedRequest.id, {
+      const saved = await updateRequest(selectedRequest.id, {
         status: REQUEST_STATUS.COMPLETED,
         completedAt: new Date().toISOString(),
         timeline: [
@@ -181,13 +181,14 @@ export default function MyRequestsPage() {
           },
         ],
       });
+      if (!saved) return;
       addToast(`Đã xác nhận hoàn thành sửa chữa cho yêu cầu ${selectedRequest.id}`, 'success');
     } else {
       if (!confirmFeedback.trim()) {
         addToast('Vui lòng nêu rõ lý do chưa đạt yêu cầu để kỹ thuật viên khắc phục', 'error');
         return;
       }
-      updateRequest(selectedRequest.id, {
+      const saved = await updateRequest(selectedRequest.id, {
         status: REQUEST_STATUS.INTERNAL_REPAIR,
         timeline: [
           ...(selectedRequest.timeline || []),
@@ -209,6 +210,7 @@ export default function MyRequestsPage() {
           },
         ],
       });
+      if (!saved) return;
       addToast(`Đã gửi phản hồi yêu cầu kỹ thuật viên kiểm tra lại cho ${selectedRequest.id}`, 'warning');
     }
     setConfirmModalOpen(false);
@@ -228,12 +230,12 @@ export default function MyRequestsPage() {
   };
 
   // Handle supplement info
-  const handleSupplement = () => {
+  const handleSupplement = async () => {
     if (!supplementText.trim()) {
       addToast('Vui lòng nhập nội dung thông tin bổ sung', 'error');
       return;
     }
-    updateRequest(selectedRequest.id, {
+    const saved = await updateRequest(selectedRequest.id, {
       status: REQUEST_STATUS.ACCEPTED,
       timeline: [
         ...(selectedRequest.timeline || []),
@@ -255,8 +257,10 @@ export default function MyRequestsPage() {
         },
       ],
     });
-    addToast(`Đã cập nhật bổ sung thông tin cho yêu cầu ${selectedRequest.id}`, 'success');
-    setSupplementModalOpen(false);
+    if (saved) {
+      addToast(`Đã cập nhật bổ sung thông tin cho yêu cầu ${selectedRequest.id}`, 'success');
+      setSupplementModalOpen(false);
+    }
   };
 
   // Table columns definition: 7 streamlined columns to prevent horizontal clipping

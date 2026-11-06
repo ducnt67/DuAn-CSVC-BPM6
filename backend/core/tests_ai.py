@@ -356,7 +356,8 @@ class StaffAndProcurementAITests(APITestCase):
     def test_acceptance_checklist_reuses_previous_failures(self):
         obj = self.make_request(
             title="Đi lại cáp mạng", description="Mạng chập chờn", status=RequestStatus.WAITING_FOR_ACCEPTANCE,
-            repair_type=RepairType.EXTERNAL, issue_category="NETWORK_IT", assigned_staff=self.it_staff,
+            repair_type=RepairType.EXTERNAL, issue_category="NETWORK_IT",
+            assigned_staff=self.it_staff, acceptance_inspector=self.it_staff,
         )
         ExternalWork.objects.create(request=obj, title="x", contractor="NCC Mạng", progress=100, status=ExternalWorkStatus.WAITING_ACCEPTANCE)
         obj.acceptance_records.create(

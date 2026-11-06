@@ -188,7 +188,7 @@ class RepairRequest(models.Model):
         on_delete=models.PROTECT,
         related_name="inspection_assignments",
         limit_choices_to={"role": Role.STAFF},
-        help_text="Cán bộ nghiệm thu công việc thuê ngoài; để trống = cán bộ khảo sát.",
+        help_text="Cán bộ nghiệm thu công việc thuê ngoài do Quản trị CSVC phân công.",
     )
     inspector_assigned_at = models.DateTimeField(null=True, blank=True)
     needs_approval = models.BooleanField(default=False)

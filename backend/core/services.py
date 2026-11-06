@@ -33,8 +33,8 @@ def requests_visible_to(user):
 
 
 def effective_inspector(request_obj):
-    """Cán bộ nghiệm thu thực tế: người được phân công nghiệm thu, nếu chưa có thì là cán bộ khảo sát."""
-    return request_obj.acceptance_inspector or request_obj.assigned_staff
+    """Cán bộ nghiệm thu thực tế: chỉ người được Quản trị CSVC phân công."""
+    return request_obj.acceptance_inspector
 
 
 def is_effective_inspector(request_obj, user):

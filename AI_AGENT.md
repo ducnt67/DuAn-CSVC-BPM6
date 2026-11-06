@@ -13,7 +13,7 @@ AI **chỉ đề xuất**, con người quyết định. Mỗi đề xuất có 
 | Phân công (`ACCEPTED`) | Quản trị CSVC | **Phân công người khảo sát**: top 3 cán bộ, chấm điểm theo chuyên môn, khối lượng việc, kinh nghiệm | Form phân công có sẵn |
 | Lập phương án (`WAITING_FOR_PLAN`) | Quản trị CSVC | **Gợi ý phương án**: nội bộ hay thuê ngoài, dự toán theo khảo sát và ca tương tự, rủi ro nhà thầu | Form lập phương án có sẵn |
 | Phê duyệt (`WAITING_FOR_APPROVAL`) | Ban Giám hiệu | **Hỗ trợ ra quyết định**: đánh giá dự toán, rủi ro, khuyến nghị Duyệt / Duyệt có điều kiện / Trả lại; soạn sẵn lý do | Nút Duyệt / Từ chối có sẵn |
-| Thuê ngoài → Nghiệm thu | Quản trị CSVC | **Phân công người nghiệm thu** (bước mới): chuyên môn, khối lượng, tính khách quan so với người khảo sát, rủi ro nhà thầu | `POST /requests/{id}/assign-inspector/` |
+| Thuê ngoài → Nghiệm thu | Quản trị CSVC | **Phân công người nghiệm thu** (bước bắt buộc): chuyên môn, khối lượng, tính khách quan so với người khảo sát, rủi ro nhà thầu | `POST /requests/{id}/assign-inspector/` |
 | Khảo sát (`SURVEYING`) | Cán bộ kỹ thuật | **Hỗ trợ khảo sát**: nguyên nhân thường gặp, hạng mục cần kiểm tra, lưu ý an toàn, vật tư mang theo, sửa ngay được không, dự toán sơ bộ | Phiếu khảo sát (điền sẵn, cán bộ xác minh) |
 | Chọn nhà thầu (`WAITING_FOR_EXTERNAL_WORK`) | BP Mua sắm | **Gợi ý nhà thầu**: so sánh đơn vị cùng lĩnh vực theo số việc, lần nghiệm thu không đạt, trễ hạn | Form cập nhật thi công |
 | Nghiệm thu (`WAITING_FOR_ACCEPTANCE`…) | Cán bộ nghiệm thu | **Checklist nghiệm thu**: theo phương án, lỗi lần trước, lịch sử nhà thầu | Biên bản nghiệm thu |
@@ -63,6 +63,7 @@ AI **chỉ đề xuất**, con người quyết định. Mỗi đề xuất có 
 | Rủi ro | Biện pháp |
 |---|---|
 | AI tự ra quyết định sai | AI không có công cụ ghi dữ liệu; mọi thay đổi đi qua API nghiệp vụ cũ (kiểm tra vai trò + trạng thái) |
+| Cán bộ chưa được phân công vẫn nghiệm thu | Luồng thuê ngoài chỉ cho phép cán bộ có `acceptance_inspector` được Quản trị CSVC phân công; trước đó API từ chối thao tác |
 | AI thấy dữ liệu vượt quyền | Mọi công cụ lọc qua `requests_visible_to(user)` (người yêu cầu chỉ thấy yêu cầu của mình…) |
 | AI bịa mã cán bộ / mã YC | Mã không tồn tại bị loại; nếu không còn cán bộ hợp lệ thì chuyển sang luật dự phòng |
 | AI bịa số liệu | Chi phí trong bản hỗ trợ phê duyệt được **hệ thống tính lại** từ dữ liệu thật ("Hệ thống kiểm chứng số liệu") |

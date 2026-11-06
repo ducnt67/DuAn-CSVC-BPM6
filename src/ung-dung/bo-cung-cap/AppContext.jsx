@@ -40,6 +40,7 @@ export function AppProvider({ children }) {
   const activeMutationsRef = useRef(0);
   const queuedToastsRef = useRef([]);
   const failedMutationRef = useRef(false);
+  const activeRequestMutationsRef = useRef(new Set());
   const requestsRef = useRef([]);
   const facilitiesRef = useRef([]);
   const notificationsRef = useRef([]);
@@ -186,12 +187,15 @@ export function AppProvider({ children }) {
   }, []);
 
   const updateRequest = useCallback(async (id, updates) => {
+    if (activeRequestMutationsRef.current.has(id)) return false;
+    activeRequestMutationsRef.current.add(id);
     beginMutation();
     await Promise.resolve();
     let succeeded = false;
     const request = requestsRef.current.find((item) => item.id === id);
     if (!request) {
       addToast(`Không tìm thấy yêu cầu ${id} để lưu.`, 'error');
+      activeRequestMutationsRef.current.delete(id);
       finishMutation(false);
       return false;
     }
@@ -206,12 +210,15 @@ export function AppProvider({ children }) {
       succeeded = true;
       return true;
     } catch (error) {
+      pendingPlansRef.current.delete(id);
+      pendingWorksRef.current.delete(id);
       addToast(
         `Không lưu được yêu cầu ${id}: ${error instanceof Error ? error.message : 'Lỗi máy chủ.'}`,
         'error'
       );
       return false;
     } finally {
+      activeRequestMutationsRef.current.delete(id);
       finishMutation(succeeded);
     }
   }, [addToast, beginMutation, finishMutation, refreshData]);
