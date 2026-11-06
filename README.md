@@ -1,6 +1,6 @@
 # HỆ THỐNG QUẢN LÝ SỬA CHỮA CƠ SỞ VẬT CHẤT – DUE FACILITY MANAGEMENT
 
-Ứng dụng frontend mô phỏng quản lý quy trình sửa chữa cơ sở vật chất (Facility Management & Business Process Management) dành cho **Trường Đại học Kinh tế – Đại học Đà Nẵng (DUE)**.
+Ứng dụng quản lý quy trình sửa chữa cơ sở vật chất (Facility Management & Business Process Management) dành cho **Trường Đại học Kinh tế – Đại học Đà Nẵng (DUE)**. Frontend React sử dụng Django REST API và database phía backend.
 
 Ứng dụng quản lý quy trình từ tiếp nhận yêu cầu, khảo sát, lập phương án và dự toán, phê duyệt khi cần, đến sửa chữa nội bộ hoặc thuê ngoài, nghiệm thu và xác nhận hoàn thành. Dữ liệu nghiệp vụ và xác thực được xử lý qua Django REST API; SQLite là cơ sở dữ liệu mặc định khi phát triển local.
 
@@ -26,9 +26,9 @@
 
 ---
 
-## 2. 5 Actor nghiệp vụ và Tài khoản Demo
+## 2. Actor nghiệp vụ và Tài khoản Demo
 
-Đây là đăng nhập mô phỏng phía frontend, không phải hệ thống xác thực bảo mật production. Tại màn hình Đăng nhập (`/login`), có thể nhập thông tin một trong 5 tài khoản demo hoặc chọn tài khoản demo để điền/đăng nhập nhanh:
+Các tài khoản demo được tạo trong database backend bằng lệnh `seed_demo`. Đăng nhập sử dụng JWT qua Django REST API; quyền nghiệp vụ được kiểm tra ở backend. Tại màn hình Đăng nhập (`/login`), có thể nhập một trong 6 tài khoản sau hoặc chọn tài khoản demo để điền nhanh:
 
 | Mã Actor | Vai trò | Họ và tên Demo | Tên đăng nhập | Mật khẩu | Quyền hạn chính |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -37,8 +37,9 @@
 | **A03** | **Cán bộ phụ trách** | Lê Hoàng Nam | `lhnam` | `123` | Khảo sát, cập nhật sửa chữa nội bộ và nghiệm thu công việc thuê ngoài được giao. |
 | **A04** | **Ban Giám hiệu** | Nguyễn Thị Thu Hà | `nttha` | `123` | Xem xét, phê duyệt hoặc từ chối phương án; lý do từ chối là bắt buộc. |
 | **A05** | **BP Đầu tư & Mua sắm** | Phạm Văn Bình | `pvbinh` | `123` | Quản lý công việc thuê ngoài, thông tin đơn vị thi công và tiến độ. |
+| **A06** | **Người yêu cầu** | Sinh viên demo | `sv_hoang` | `123` | Tạo và theo dõi yêu cầu sửa chữa của mình. |
 
-> **Lưu ý demo**: Mật khẩu mẫu được khai báo trực tiếp trong mã nguồn và không dùng cho môi trường production. Đăng xuất rồi đăng nhập tài khoản khác để đổi vai trò; tại trang đăng nhập cũng có thao tác nhanh cho các tài khoản demo. Vai trò chủ yếu dùng để lọc menu và điều khiển thao tác trên giao diện, không thay thế phân quyền phía máy chủ.
+> **Lưu ý demo**: Mật khẩu mẫu chỉ dành cho local/demo, không dùng cho production. Đăng xuất rồi đăng nhập tài khoản khác để đổi vai trò; tại trang đăng nhập cũng có thao tác nhanh cho các tài khoản demo. Vai trò dùng để lọc menu ở frontend và được kiểm tra lại ở backend.
 > Không có tài khoản đăng nhập riêng cho nhà thầu. Thông tin đơn vị thi công được quản lý trong hồ sơ công việc thuê ngoài bởi BP Đầu tư & Mua sắm.
 
 ---
@@ -144,7 +145,7 @@ Luồng nghiệp vụ hiện được phối hợp giữa các màn hình và `A
    python manage.py migrate
    python manage.py seed_demo
    ```
-   *Lệnh `migrate` sẽ tự động khởi tạo cơ sở dữ liệu SQLite tại `backend/db.sqlite3`. Tiếp theo, `seed_demo` nạp 6 tài khoản người dùng, 12 CSVC và các yêu cầu sửa chữa mẫu.*
+   *Lệnh `migrate` sẽ tự động khởi tạo cơ sở dữ liệu SQLite tại `backend/db.sqlite3`. Tiếp theo, `seed_demo` tạo các tài khoản demo, danh mục CSVC và các yêu cầu sửa chữa mẫu.*
 3. **Khởi chạy máy chủ Backend**:
    ```powershell
    python manage.py runserver
