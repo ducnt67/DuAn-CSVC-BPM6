@@ -31,6 +31,11 @@ export function AppProvider({ children }) {
   const [notifications, setNotificationsState] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Trạng thái tải dữ liệu nghiệp vụ sau khi đăng nhập: idle | loading | ready | error.
+  // Trang hiện skeleton cho tới khi 'ready' (xem AppLayout).
+  const [dataStatus, setDataStatus] = useState('idle');
+  const [dataError, setDataError] = useState('');
+  const dataLoadSeqRef = useRef(0);
   const toastIdRef = useRef(0);
   const activeMutationsRef = useRef(0);
   const queuedToastsRef = useRef([]);
@@ -88,7 +93,25 @@ export function AppProvider({ children }) {
   const refreshData = useCallback(async () => {
     const snapshot = await loadBackendData();
     applySnapshot(snapshot);
+    setDataStatus('ready');
     return snapshot;
+  }, [applySnapshot]);
+
+  // Tải dữ liệu nền sau khi đã vào trang; lần gọi mới hơn (hoặc đăng xuất) sẽ bỏ qua kết quả cũ.
+  const loadInitialData = useCallback(async () => {
+    const seq = ++dataLoadSeqRef.current;
+    setDataStatus('loading');
+    setDataError('');
+    try {
+      const snapshot = await loadBackendData();
+      if (seq !== dataLoadSeqRef.current) return;
+      applySnapshot(snapshot);
+      setDataStatus('ready');
+    } catch (error) {
+      if (seq !== dataLoadSeqRef.current) return;
+      setDataError(error instanceof Error ? error.message : 'Không tải được dữ liệu.');
+      setDataStatus('error');
+    }
   }, [applySnapshot]);
 
   useEffect(() => {
@@ -98,10 +121,9 @@ export function AppProvider({ children }) {
       try {
         if (hadSession) {
           const user = await getCurrentUser();
-          const snapshot = await loadBackendData();
           if (active) {
-            applySnapshot(snapshot);
             setCurrentUser(normalizeUser(user));
+            loadInitialData();
           }
         }
       } catch (error) {
@@ -120,15 +142,15 @@ export function AppProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [addToast, applySnapshot]);
+  }, [addToast, loadInitialData]);
 
+  // Chỉ chờ xác thực tài khoản; dữ liệu các danh sách tải nền sau khi đã vào trang.
   const login = useCallback(async (username, password, rememberMe = true) => {
     try {
       const user = await signIn(username, password, rememberMe);
-      const snapshot = await loadBackendData();
-      applySnapshot(snapshot);
       const normalizedUser = normalizeUser(user);
       setCurrentUser(normalizedUser);
+      loadInitialData();
       return { success: true, user: normalizedUser };
     } catch (error) {
       await signOut();
@@ -137,7 +159,7 @@ export function AppProvider({ children }) {
         message: error instanceof Error ? error.message : 'Không thể kết nối máy chủ.',
       };
     }
-  }, [applySnapshot]);
+  }, [loadInitialData]);
 
   const switchUser = useCallback((userId) => {
     if (userId !== currentUser?.id) {
@@ -147,6 +169,9 @@ export function AppProvider({ children }) {
 
   const logout = useCallback(async () => {
     await signOut();
+    dataLoadSeqRef.current += 1;
+    setDataStatus('idle');
+    setDataError('');
     setCurrentUser(null);
     requestsRef.current = [];
     facilitiesRef.current = [];
@@ -313,6 +338,7 @@ export function AppProvider({ children }) {
     updateRequest, addRequest, updateFacility, addFacility,
     updateRepairPlan, addRepairPlan, updateExternalWork, addExternalWork,
     resetDemoData, toasts, addToast, removeToast, users, refreshData,
+    dataStatus, dataError, retryDataLoad: loadInitialData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

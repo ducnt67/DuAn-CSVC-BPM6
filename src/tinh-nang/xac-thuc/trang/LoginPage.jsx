@@ -5,13 +5,22 @@ import { warmUpServer } from '../../../ha-tang/api/apiClient';
 import { ROLES, ROLE_LABELS } from '../../../dung-chung/hang-so/roles';
 import {
   Lock, User, Eye, EyeOff, LogIn,
-  ShieldCheck, Phone, Mail, CheckCircle, ArrowRight, Info
+  Phone, Mail, CheckCircle, Info, Loader2, Clock3
 } from 'lucide-react';
-import Button from '../../../dung-chung/thanh-phan/Button';
 import UniversityLogo from '../../../dung-chung/thanh-phan/UniversityLogo';
 import Footer from '../../../dung-chung/bo-cuc/Footer';
+import './LoginPage.css';
 
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || '123';
+
+// Trang chủ theo vai trò sau khi đăng nhập
+function homePathFor(role) {
+  if (role === ROLES.REQUESTER) return '/my-requests';
+  if (role === ROLES.FACILITY_ADMIN) return '/requests';
+  if (role === ROLES.STAFF) return '/repair-work';
+  if (role === ROLES.DIRECTOR) return '/approvals';
+  return '/dashboard';
+}
 
 export default function LoginPage() {
   const { users, login, addToast } = useApp();
@@ -23,13 +32,26 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingDemoUser, setLoadingDemoUser] = useState(null);
+  const [slowServer, setSlowServer] = useState(false);
 
   useEffect(() => {
     warmUpServer();
   }, []);
 
+  // Đăng nhập lâu hơn 4 giây thường do máy chủ (Render gói miễn phí) đang khởi động lại
+  useEffect(() => {
+    if (!loading) {
+      setSlowServer(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setSlowServer(true), 4000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setErrorMessage('');
     setLoading(true);
 
@@ -38,17 +60,7 @@ export default function LoginPage() {
 
     if (result.success) {
       addToast(`Đăng nhập thành công! Xin chào ${result.user.name}`, 'success');
-      const targetPath =
-        result.user.role === ROLES.REQUESTER
-          ? '/my-requests'
-          : result.user.role === ROLES.FACILITY_ADMIN
-            ? '/requests'
-            : result.user.role === ROLES.STAFF
-            ? '/repair-work'
-                : (result?.user?.role || user?.role) === ROLES.DIRECTOR
-                ? '/approvals'
-              : '/dashboard';
-      navigate(targetPath);
+      navigate(homePathFor(result.user.role));
     } else {
       setErrorMessage(result.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.');
     }
@@ -56,27 +68,20 @@ export default function LoginPage() {
 
   // Helper to prefill demo credentials
   const handleSelectDemoAccount = async (user, autoLogin = false) => {
+    if (loading) return;
     setUsername(user.username);
     setPassword(DEMO_PASSWORD);
     setErrorMessage('');
 
     if (autoLogin) {
       setLoading(true);
+      setLoadingDemoUser(user.username);
       const result = await login(user.username, DEMO_PASSWORD, rememberMe);
       setLoading(false);
+      setLoadingDemoUser(null);
       if (result.success) {
         addToast(`Đăng nhập thành công với vai trò ${ROLE_LABELS[user.role]}`, 'success');
-        const targetPath =
-          user.role === ROLES.REQUESTER
-            ? '/my-requests'
-            : user.role === ROLES.FACILITY_ADMIN
-              ? '/requests'
-              : user.role === ROLES.STAFF
-              ? '/repair-work'
-                : (result?.user?.role || user?.role) === ROLES.DIRECTOR
-                ? '/approvals'
-                : '/dashboard';
-        navigate(targetPath);
+        navigate(homePathFor(result.user?.role || user.role));
       } else {
         setErrorMessage(result.message || 'Không thể đăng nhập bằng tài khoản demo.');
       }
@@ -285,7 +290,12 @@ export default function LoginPage() {
             )}
 
             {/* Actual Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form
+              onSubmit={handleSubmit}
+              className={`login-form${loading ? ' is-loading' : ''}`}
+              aria-busy={loading}
+              style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+            >
               <div>
                 <label
                   htmlFor="login-username"
@@ -313,6 +323,7 @@ export default function LoginPage() {
                     id="login-username"
                     type="text"
                     required
+                    readOnly={loading}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="VD: nmanh hoặc tqhuy"
@@ -359,6 +370,7 @@ export default function LoginPage() {
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     required
+                    readOnly={loading}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Nhập mật khẩu"
@@ -418,6 +430,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
+                className={`login-submit${loading ? ' is-loading' : ''}`}
                 style={{
                   marginTop: 8,
                   width: '100%',
@@ -439,9 +452,26 @@ export default function LoginPage() {
                 onMouseOver={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-due-blue-hover)')}
                 onMouseOut={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-due-blue)')}
               >
-                <LogIn size={17} />
-                <span>{loading ? 'Đang xác thực...' : 'ĐĂNG NHẬP HỆ THỐNG'}</span>
+                {loading ? <Loader2 size={17} className="login-spin" /> : <LogIn size={17} />}
+                <span>
+                  {loading
+                    ? loadingDemoUser
+                      ? `Đang đăng nhập ${loadingDemoUser}...`
+                      : 'Đang xác thực tài khoản...'
+                    : 'ĐĂNG NHẬP HỆ THỐNG'}
+                </span>
+                {loading && <span className="login-submit__bar" aria-hidden="true" />}
               </button>
+
+              {slowServer && (
+                <div className="login-hint" role="status">
+                  <Clock3 size={15} />
+                  <span>
+                    Máy chủ đang khởi động lại sau thời gian không hoạt động (gói miễn phí), lần đầu có thể
+                    mất tới 30 giây. Vui lòng chờ trong giây lát…
+                  </span>
+                </div>
+              )}
             </form>
 
             {/* Quick Demo Credentials Box */}
@@ -515,6 +545,8 @@ export default function LoginPage() {
                         <button
                           type="button"
                           onClick={() => handleSelectDemoAccount(u, false)}
+                          disabled={loading}
+                          className="login-demo-btn"
                           style={{
                             padding: '3px 8px',
                             borderRadius: 3,
@@ -532,6 +564,8 @@ export default function LoginPage() {
                         <button
                           type="button"
                           onClick={() => handleSelectDemoAccount(u, true)}
+                          disabled={loading}
+                          className={`login-demo-btn${loadingDemoUser === u.username ? ' is-loading' : ''}`}
                           style={{
                             padding: '3px 8px',
                             borderRadius: 3,
@@ -544,6 +578,7 @@ export default function LoginPage() {
                           }}
                           title="Đăng nhập ngay vào hệ thống với vai trò này"
                         >
+                          {loadingDemoUser === u.username && <Loader2 size={11} className="login-spin" />}
                           Vào ngay
                         </button>
                       </div>

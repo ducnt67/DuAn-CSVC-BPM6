@@ -1,0 +1,198 @@
+/* ===== Skeleton tải trang ===== */
+.skel-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: skel-fade-in 240ms ease both;
+}
+
+/* Một dải sáng cố định theo khung nhìn => mọi khối lấp lánh đồng bộ như một bề mặt liền */
+.skel {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background-color: #e6ecf3;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  background-size: 200vw 100%;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  animation: skel-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes skel-sweep {
+  0% { background-position: -100vw 0; }
+  100% { background-position: 100vw 0; }
+}
+
+@keyframes skel-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.skel-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.skel-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Tiêu đề trang */
+.skel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+.skel-header__text { display: flex; flex-direction: column; gap: 12px; max-width: 100%; }
+.skel-header__text .skel { max-width: 100%; }
+
+/* Thanh lọc & tab */
+.skel-filters { display: flex; gap: 12px; padding: 16px 18px; }
+.skel-tabs { display: flex; gap: 10px; }
+
+/* Bảng */
+.skel-table { overflow: hidden; }
+.skel-table__head {
+  display: flex;
+  gap: 28px;
+  padding: 16px 18px;
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.skel-table__row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.skel-table__row:last-child { border-bottom: none; }
+.skel-col { display: flex; flex-direction: column; gap: 8px; flex: 1 1 0; min-width: 0; }
+.skel-col--code { flex: 0 0 78px; }
+.skel-col--wide { flex: 2.2 1 0; }
+.skel-col--pill { flex: 0 0 84px; }
+.skel-col--action { flex: 0 0 96px; align-items: flex-end; }
+
+/* Tổng quan */
+.skel-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.skel-stat { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.skel-stat__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.skel-grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.skel-chart { display: flex; flex-direction: column; gap: 18px; padding: 18px; min-height: 250px; }
+.skel-bars { display: flex; align-items: flex-end; gap: 14px; height: 170px; padding: 0 4px; }
+.skel-bars .skel { flex: 1 1 0; border-radius: 4px 4px 0 0; }
+.skel-donut-wrap { display: flex; align-items: center; gap: 24px; flex: 1; }
+.skel-donut {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  -webkit-mask: radial-gradient(circle, transparent 46px, #000 47px);
+  mask: radial-gradient(circle, transparent 46px, #000 47px);
+}
+.skel-legend { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+
+/* Chi tiết yêu cầu */
+.skel-detail-head { display: flex; flex-direction: column; gap: 16px; padding: 22px 24px; }
+.skel-block { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; }
+.skel-row-gap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.skel-row-gap--end { justify-content: flex-end; }
+.skel-stack { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.skel-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.skel-grid-detail { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+.skel-step { display: flex; align-items: center; gap: 14px; }
+.skel-dot { width: 26px; height: 26px; border-radius: 50%; }
+.skel-kv { display: flex; justify-content: space-between; gap: 16px; }
+
+/* Biểu mẫu */
+.skel-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; }
+
+/* Thông báo khi tải lâu (Render đang khởi động) */
+.skel-slow {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--color-due-blue-light);
+  border: 1px solid #c6def3;
+  color: var(--color-due-blue-dark);
+  font-size: var(--font-size-sm);
+  animation: skel-fade-in 300ms ease both;
+}
+
+/* Lỗi tải dữ liệu */
+.skel-error {
+  margin: 48px auto;
+  max-width: 440px;
+  padding: 32px 28px;
+  text-align: center;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+.skel-error__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  margin-bottom: 12px;
+}
+.skel-error h2 { margin: 0 0 6px; font-size: var(--font-size-lg); color: var(--color-text); }
+.skel-error p { margin: 0 0 18px; color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+.skel-error__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-due-blue);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.skel-error__retry:hover { background: var(--color-due-blue-hover); }
+
+/* Nội dung thật hiện ra mượt sau skeleton */
+.page-ready { animation: skel-fade-in 260ms ease both; }
+
+@media (max-width: 992px) {
+  .skel-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skel-grid-2, .skel-grid-detail { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .skel-filters { flex-wrap: wrap; }
+  .skel-filters .skel { width: 100% !important; }
+  .skel-table__head { display: none; }
+  .skel-table__row > .skel-col:nth-child(n + 4) { display: none; }
+  .skel-form-grid, .skel-grid-4 { grid-template-columns: 1fr; }
+  .skel-header__text .skel:first-child { width: 220px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; background-image: none; }
+  .skel-page, .page-ready, .skel-slow { animation: none; }
+}
