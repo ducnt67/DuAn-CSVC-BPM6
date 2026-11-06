@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Sparkles, CheckCircle2, PencilLine, XCircle, Clock, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { RefreshCw, Sparkles, CheckCircle2, PencilLine, XCircle, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import PageHeader from '../../../dung-chung/bo-cuc/PageHeader';
 import Button from '../../../dung-chung/thanh-phan/Button';
 import { formatDateTime } from '../../../dung-chung/tien-ich/formatDate';
@@ -65,33 +65,73 @@ function outputSummary(item) {
   }
 }
 
+const PAGE_SIZE = 20;
+
+// Dãy số trang gọn: 1 … 4 5 6 … 12
+function pageList(current, total) {
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  const sorted = [...pages].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const out = [];
+  sorted.forEach((n, i) => {
+    if (i > 0 && n - sorted[i - 1] > 1) out.push(`gap-${n}`);
+    out.push(n);
+  });
+  return out;
+}
+
 export default function AiLogPage() {
   const [stats, setStats] = useState(null);
   const [items, setItems] = useState([]);
   const [count, setCount] = useState(0);
   const [filters, setFilters] = useState({ kind: '', status: '', source: '' });
+  const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
+  const loadStats = useCallback(async () => {
+    try {
+      setStats(await getAiStats());
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
+  // Mỗi lần chỉ tải 1 trang (20 bản ghi); đổi trang không tải lại phần thống kê
+  const loadPage = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [statsData, page] = await Promise.all([getAiStats(), listSuggestions(filters)]);
-      setStats(statsData);
-      setItems(page.results || []);
-      setCount(page.count || 0);
+      const data = await listSuggestions({ ...filters, page, page_size: PAGE_SIZE });
+      setItems(data.results || []);
+      setCount(data.count || 0);
+      setExpanded(null);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, page]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
+    loadPage();
+  }, [loadPage]);
+
+  const reload = () => {
+    loadStats();
+    loadPage();
+  };
+
+  const changeFilter = (key, value) => {
+    setFilters((f) => ({ ...f, [key]: value }));
+    setPage(1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
   const rows = (stats?.byKind || []).filter((row) => row.total > 0 || row.kind !== 'CHAT');
 
@@ -105,7 +145,7 @@ export default function AiLogPage() {
             {stats.aiEnabled ? 'Gemini đang hoạt động' : 'Đang dùng bộ luật dự phòng'}
           </span>
         )}
-        actions={<Button variant="outline" icon={RefreshCw} onClick={load} loading={loading}>Tải lại</Button>}
+        actions={<Button variant="outline" icon={RefreshCw} onClick={reload} loading={loading}>Tải lại</Button>}
       />
 
       {error && <div className="ai-alert ai-alert--danger">{error}</div>}
@@ -169,15 +209,15 @@ export default function AiLogPage() {
         <header className="ai-card__head">
           <h2>Các lần phân tích gần đây <span className="ai-count">({count})</span></h2>
           <div className="ai-filters">
-            <select value={filters.kind} onChange={(e) => setFilters((f) => ({ ...f, kind: e.target.value }))} aria-label="Lọc loại">
+            <select value={filters.kind} onChange={(e) => changeFilter('kind', e.target.value)} aria-label="Lọc loại">
               <option value="">Tất cả loại</option>
               {Object.entries(AI_KIND_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} aria-label="Lọc kết quả">
+            <select value={filters.status} onChange={(e) => changeFilter('status', e.target.value)} aria-label="Lọc kết quả">
               <option value="">Tất cả kết quả</option>
               {Object.entries(AI_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <select value={filters.source} onChange={(e) => setFilters((f) => ({ ...f, source: e.target.value }))} aria-label="Lọc nguồn">
+            <select value={filters.source} onChange={(e) => changeFilter('source', e.target.value)} aria-label="Lọc nguồn">
               <option value="">Mọi nguồn</option>
               <option value="gemini">Gemini</option>
               <option value="rule">Luật dự phòng</option>
@@ -263,7 +303,37 @@ export default function AiLogPage() {
             </tbody>
           </table>
         </div>
-        {count > items.length && <p className="ai-hint" style={{ padding: '0 16px 12px' }}><Search size={12} /> Đang hiển thị {items.length}/{count} bản ghi mới nhất.</p>}
+        {count > 0 && (
+          <footer className="ai-pager">
+            <span className="ai-pager__info">
+              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, count)} / {count} bản ghi
+            </span>
+            {totalPages > 1 && (
+              <nav className="ai-pager__nav" aria-label="Phân trang nhật ký AI">
+                <button type="button" className="ai-pager__btn" onClick={() => setPage((p) => p - 1)} disabled={page <= 1 || loading} aria-label="Trang trước">
+                  <ChevronLeft size={16} />
+                </button>
+                {pageList(page, totalPages).map((n) => (typeof n === 'string' ? (
+                  <span key={n} className="ai-pager__gap">…</span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`ai-pager__btn${n === page ? ' is-active' : ''}`}
+                    aria-current={n === page ? 'page' : undefined}
+                    onClick={() => setPage(n)}
+                    disabled={loading}
+                  >
+                    {n}
+                  </button>
+                )))}
+                <button type="button" className="ai-pager__btn" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages || loading} aria-label="Trang sau">
+                  <ChevronRight size={16} />
+                </button>
+              </nav>
+            )}
+          </footer>
+        )}
       </section>
     </div>
   );

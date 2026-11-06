@@ -3,7 +3,7 @@ from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.http import HttpResponse
 from django.conf import settings
 from django.utils import timezone
@@ -11,6 +11,7 @@ from django.utils.dateparse import parse_date
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -1448,8 +1449,15 @@ class AITriagePreviewView(APIView):
         return Response(AISuggestionSerializer(suggestion).data, status=status.HTTP_201_CREATED)
 
 
+class AISuggestionPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class AISuggestionViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = AISuggestionSerializer
+    pagination_class = AISuggestionPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -1463,7 +1471,14 @@ class AISuggestionViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         request_code = self.request.query_params.get("requestId")
         if request_code:
             queryset = queryset.filter(request__code=request_code)
-        return queryset
+        request_codes = [c.strip() for c in self.request.query_params.get("requestIds", "").split(",") if c.strip()]
+        if request_codes:
+            queryset = queryset.filter(request__code__in=request_codes)
+        if self.request.query_params.get("latest") in ("1", "true"):
+            # Chỉ giữ lần phân tích mới nhất của mỗi yêu cầu (trong phạm vi bộ lọc hiện tại).
+            newest = queryset.filter(request=OuterRef("request")).order_by("-created_at", "-id").values("id")[:1]
+            queryset = queryset.filter(request__isnull=False, id=Subquery(newest))
+        return queryset.order_by("-created_at", "-id")
 
     @action(detail=True, methods=["post"])
     def dismiss(self, request, pk=None):

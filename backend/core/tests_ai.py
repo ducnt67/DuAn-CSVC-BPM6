@@ -2,6 +2,7 @@
 đối chiếu quyết định và bước phân công người nghiệm thu."""
 
 import json
+from datetime import timedelta
 from unittest import mock
 
 from django.test import override_settings
@@ -11,6 +12,7 @@ from rest_framework.test import APITestCase
 from core.ai import agent as agent_module
 from core.models import (
     AISuggestion,
+    AISuggestionKind,
     AISuggestionStatus,
     ExternalWork,
     ExternalWorkStatus,
@@ -190,6 +192,26 @@ class AIAgentTests(APITestCase):
         self.assertEqual(stats["modified"], 1)
         self.client.force_authenticate(self.requester)
         self.assertEqual(self.client.get("/api/v1/ai/stats/").status_code, 403)
+
+    def test_suggestion_log_paginates_and_returns_latest_per_request(self):
+        first, second = self.make_request(), self.make_request(title="Đèn hành lang chập chờn")
+        base = timezone.now() - timedelta(hours=30)
+        for i in range(25):
+            s = AISuggestion.objects.create(
+                request=first if i % 2 else second, kind=AISuggestionKind.APPROVAL_BRIEF,
+                created_by=self.director, output={"n": i},
+            )
+            AISuggestion.objects.filter(pk=s.pk).update(created_at=base + timedelta(hours=i))
+        self.client.force_authenticate(self.admin)
+        page2 = self.client.get("/api/v1/ai/suggestions/?page=2").data
+        self.assertEqual(page2["count"], 25)
+        self.assertEqual(len(page2["results"]), 5)
+        self.assertEqual(len(self.client.get("/api/v1/ai/suggestions/?page_size=10").data["results"]), 10)
+        self.assertEqual(len(self.client.get("/api/v1/ai/suggestions/?page_size=500").data["results"]), 25)
+        latest = self.client.get("/api/v1/ai/suggestions/?kind=APPROVAL_BRIEF&latest=1").data["results"]
+        self.assertEqual({row["requestId"]: row["output"]["n"] for row in latest}, {first.code: 23, second.code: 24})
+        only_first = self.client.get(f"/api/v1/ai/suggestions/?requestIds={first.code}").data
+        self.assertEqual(only_first["count"], 12)
 
 
 def _fake_content(parts):
