@@ -40,8 +40,8 @@ CATEGORY_KEYWORDS = [
     ("NETWORK_IT", ["mang noi bo", "diem mang", "ket noi mang", "mat mang", "toc do mang", "wifi", "internet", "switch", "router", "cap mang", "may tinh", "may in", "camera"]),
     ("PLUMBING", ["nuoc", "voi nuoc", "ong nuoc", "duong ong", "ro ri", "lavabo", "bon cau", "thoat nuoc", "tac nghen", "bi tac", "may bom"]),
     ("ELECTRICAL", ["dien", "o cam", "cong tac", "bong den", "he thong den", "den hanh lang", "den chieu sang", "den led", "den tuyp", "cau dao", "aptomat", "chap chon", "chap dien", "khet", "tia lua"]),
-    ("FURNITURE", ["ban ghe", "mat ban", "chan ban", "ban hoc", "ghe", "tu ho so", "tu sach", "ke sach", "bang viet", "bang tu", "rem"]),
-    ("BUILDING", ["canh cua", "cua phong", "cua so", "cua ra vao", "cua kinh", "o khoa", "khoa cua", "ban le", "tran nha", "tran thach cao", "tuong", "san nha", "mai ton", "mai nha", "vo kinh", "nut", "tham", "son tuong", "gach", "cau thang", "lan can"]),
+    ("FURNITURE", ["ban ghe", "mat ban", "chan ban", "ban hoc", "ban giang vien", "ban giao vien", "ghe", "tu ho so", "tu sach", "ke sach", "bang viet", "bang tu", "rem"]),
+    ("BUILDING", ["canh cua", "cua phong", "cua so", "cua ra vao", "cua kinh", "o khoa", "khoa cua", "ban le", "tran nha", "tran thach cao", "tuong", "san nha", "mai ton", "mai nha", "vo kinh", "nut", "tham", "tham nuoc", "dot nuoc", "ngam nuoc", "tran phong", "son tuong", "gach", "cau thang", "lan can"]),
     ("SANITATION", ["ve sinh", "rac", "mui hoi", "con trung", "chuot", "moi mot"]),
 ]
 
@@ -59,14 +59,21 @@ SAFETY_KEYWORDS = [
     "boc chay", "bi chay", "dau hieu chay", "chay no", "khet", "tia lua", "boc khoi", "dien giat",
     "giat dien", "ro dien", "chap dien", "sap do", "nguy co sap", "nut lon", "vo kinh", "ngap",
     "ro gas", "phat no", "hoa hoan", "nong chay",
+    "nguoi bi ket", "sinh vien bi ket", "bi ket trong", "mac ket", "ket trong thang may",
 ]
+# Nước tiếp xúc thiết bị điện -> nguy cơ chập/giật điện dù người gửi không dùng từ "chập", "cháy".
+WATER_KEYWORDS = ["dot nuoc", "nho nuoc", "tham nuoc", "nuoc chay", "ngam nuoc", "ro nuoc", "ngap"]
+ELECTRIC_POINT_KEYWORDS = ["o cam", "o dien", "day dien", "cong tac", "tu dien", "aptomat", "cau dao"]
 HIGH_IMPACT_KEYWORDS = [
     "khong hoat dong", "hong hoan toan", "khong su dung duoc", "anh huong giang day",
     "anh huong hoc tap", "ky thi", "lich thi", "phong thi", "ca phong", "toan bo", "ca tang",
     "mat dien", "mat nuoc",
     "khong len hinh", "khong vao duoc", "ro ri", "chay lien tuc",
 ]
-LOW_IMPACT_KEYWORDS = ["tray", "bong son", "cu", "lech nhe", "keu nho", "tham my"]
+LOW_IMPACT_KEYWORDS = [
+    "tray", "bong son", "cu", "lech nhe", "keu nho", "tham my",
+    "van su dung duoc", "van dung duoc", "hoi lung lay", "kiem tra khi tien",
+]
 
 # Tổ chuyên môn (từ khóa trong tên phòng ban, không dấu) -> các loại sự cố cán bộ xử lý được.
 TEAM_SKILLS = [

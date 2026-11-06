@@ -317,6 +317,10 @@ def get_facility_history(user, facility_code):
     )
     since = timezone.now() - timedelta(days=180)
     recent = [r for r in reqs if r.created_at >= since]
+    recent_by_category = {}
+    for r in recent:
+        if r.issue_category:
+            recent_by_category[r.issue_category] = recent_by_category.get(r.issue_category, 0) + 1
     total_cost = sum(c for c in (_final_cost(r) for r in reqs) if c)
     return {
         "facility": {
@@ -328,9 +332,11 @@ def get_facility_history(user, facility_code):
         "open_requests": sum(1 for r in reqs if r.status in ACTIVE_STATUSES),
         "total_repair_cost": total_cost,
         "recurring_issue": len(recent) >= 2,
+        "recent_by_category": recent_by_category,
         "items": [
             {
                 "code": r.code, "title": r.title, "status_label": STATUS_LABELS.get(r.status),
+                "category": r.issue_category or None,
                 "created_at": _date(r.created_at), "repair_type": r.repair_type, "cost": _final_cost(r),
             }
             for r in reqs[:10]

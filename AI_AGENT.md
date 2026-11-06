@@ -102,7 +102,11 @@ npm run dev
 
 Không có key thì hệ thống vẫn chạy bằng bộ luật dự phòng (giao diện ghi rõ "Luật dự phòng").
 
-`seed_demo` tạo 10 tài khoản (thêm 4 cán bộ theo tổ: Điện – Điện lạnh, CNTT, Cấp thoát nước, Xây dựng – Nội thất), **38 ca lịch sử trong 6 tháng** (để AI có dữ liệu so sánh chi phí, kinh nghiệm cán bộ, nhà thầu) và 6 tình huống demo (YC-8101..YC-8106).
+`seed_demo` tạo:
+- 10 tài khoản, trong đó có 4 cán bộ theo tổ: Điện – Điện lạnh, CNTT, Cấp thoát nước, Xây dựng – Nội thất;
+- 15 cơ sở vật chất;
+- **43 ca lịch sử đã hoàn thành**, để AI có dữ liệu so sánh chi phí, kinh nghiệm cán bộ và nhà thầu;
+- **27 ca thử** (YC-8101..YC-8127), chia theo vai trò ở mục 6a.
 
 Trước buổi demo/bảo vệ, đưa các tình huống demo về trạng thái ban đầu:
 
@@ -126,6 +130,53 @@ Trước buổi demo/bảo vệ, đưa các tình huống demo về trạng thá
 | 10 | `lhnam` | Nghiệm thu → YC-9007 | **AI checklist** → Dùng checklist | Checklist bám lỗi lần nghiệm thu trước và lịch sử nhà thầu |
 | 11 | `nttha` | Nút **Hỏi Trợ lý AI** | "Nhà thầu nào từng nghiệm thu không đạt…" | Agent tự gọi công cụ, dẫn mã YC |
 | 12 | `tqhuy` | Nhật ký Trợ lý AI | — | Tỉ lệ chấp nhận, các bước tra cứu, JSON đầu ra |
+
+## 6a. Bộ ca thử theo vai trò
+
+Mỗi ca có một điểm "không ổn" để AI phát hiện. Ca nào đã xử lý xong thì dùng ca khác cùng nhóm, hoặc tự tạo ca mới theo mục 6b.
+
+| Tài khoản | Màn hình → nút AI | Ca thử | AI cần nhận ra |
+|---|---|---|---|
+| `tqhuy` | Danh sách yêu cầu → **AI** | YC-8107 | Nước dột xuống ổ cắm → **Rất khẩn cấp**; liên quan YC-8122 (chống thấm F102 đang chờ duyệt) |
+| | | YC-8108 | Người gửi chọn Rất khẩn cấp cho bàn hơi lung lay → đề xuất **hạ mức độ** |
+| | | YC-8109 | Máy chiếu D201 hỏng lặp lại, sắp bảo vệ khóa luận → **nâng mức**, nhắc ca cũ |
+| | | YC-8110 | Mô tả "có vấn đề" → **yêu cầu bổ sung thông tin**, soạn sẵn câu hỏi |
+| | | YC-8111 | **Trùng** YC-8103 (wifi tầng 3 Khu E đang xử lý) |
+| | | YC-8112 | Có người kẹt thang máy → **Rất khẩn cấp**, loại "Khác" |
+| | | YC-8113, YC-8114 | Phân công khảo sát đúng tổ: nội thất → `pmkhoa`, điện → `tvdung` |
+| | | YC-8118 | Lập phương án: dự toán 6,2 triệu vượt hạn mức nội bộ → **thuê ngoài, cần BGH duyệt** |
+| | | YC-8119 | Lập phương án: thay 8 bóng LED 1,6 triệu → **sửa nội bộ**, không cần duyệt |
+| | | YC-8125 | Phân công **người nghiệm thu** cho việc thuê ngoài đang thi công |
+| `nttha` | Phê duyệt phương án → **AI phân tích** | YC-8120 | Dự toán sát khảo sát và lịch sử → **Duyệt** |
+| | | YC-8121 | Dự toán 18,5 triệu, gần gấp đôi khảo sát (chỉ cần thay 7/12 bộ) → **Trả lại** |
+| | | YC-8122 | Trần F102 từng chống thấm nay thấm lại → **duyệt có điều kiện**, hỏi bảo hành nhà thầu cũ |
+| `pvbinh` | Công việc thuê ngoài → **AI chọn nhà thầu** | YC-8123 | Nhà thầu nước duy nhất từng nghiệm thu không đạt → nêu rủi ro, điều kiện bảo hành |
+| | | YC-8124 | Nhà thầu mạng có cả ca tốt lẫn ca không đạt / trễ hạn → cân nhắc |
+| `lvtoan` | Công việc sửa chữa → **AI gợi ý** | YC-8115 | Gợi ý khảo sát ống thoát lavabo rò nước |
+| `nqbao` | Công việc sửa chữa → **AI gợi ý** | YC-8116 | Gợi ý khảo sát 4 máy phòng E301 mất mạng |
+| `lhnam` | Công việc sửa chữa → **AI gợi ý** | YC-8117, YC-9002 | Gợi ý khảo sát cửa kẹt / đèn chập chờn |
+| `tvdung` | Nghiệm thu → **AI checklist** | YC-8126 | Nhà thầu Hòa Khánh từng không đạt và trễ hạn → checklist kỹ hơn |
+| `lhnam` | Nghiệm thu → **AI checklist** | YC-8127, YC-9007 | Nghiệm thu thay người khảo sát; bám lỗi lần nghiệm thu trước |
+
+Tất cả tài khoản dùng mật khẩu `123`.
+
+## 6b. Tự tạo dữ liệu thử
+
+1. Đăng nhập `nmanh` (giảng viên) hoặc `sv_hoang` (sinh viên) → **Tạo yêu cầu**. Viết mô tả theo kiểu muốn thử, rồi bấm **Phân tích mô tả** để xem AI gợi ý ngay khi tạo:
+   - **Nguy hiểm:** "mùi khét", "tia lửa", "nước chảy xuống ổ cắm", "người bị kẹt" → AI nâng lên Rất khẩn cấp.
+   - **Việc nhỏ:** "vẫn sử dụng được", "hơi lung lay" → AI đề xuất hạ mức.
+   - **Mô tả mơ hồ:** "phòng có vấn đề" → AI đề nghị hỏi thêm.
+   - **Trùng:** báo lại đúng sự cố đang mở (wifi Khu E, điều hòa C101) → AI cảnh báo trùng.
+2. `tqhuy`: **Danh sách yêu cầu** → nút **AI** của yêu cầu vừa tạo → áp dụng phân loại → **Tiếp nhận yêu cầu** → AI phân công người khảo sát.
+3. Cán bộ được phân công (`lhnam`, `tvdung`, `nqbao`, `lvtoan` hoặc `pmkhoa`): **Công việc sửa chữa** → **AI gợi ý** → điền và gửi phiếu khảo sát.
+4. `tqhuy`: mở yêu cầu → AI lập phương án → **Dùng phương án**. Phương án sẽ chuyển BGH duyệt nếu là thuê ngoài, hoặc nếu được đánh dấu "cần phê duyệt" (AI tự đánh dấu khi dự toán từ 3 triệu).
+   - Muốn thử AI bắt lỗi dự toán: ghi dự toán khảo sát thấp (ví dụ 2 triệu), rồi sửa phương án lên cao (ví dụ 5 triệu).
+5. `nttha`: **Phê duyệt phương án** → **AI phân tích** → Duyệt hoặc Trả lại.
+6. Nếu thuê ngoài:
+   - `pvbinh`: **AI chọn nhà thầu** → cập nhật tiến độ → báo hoàn thành.
+   - `tqhuy`: phân công người nghiệm thu.
+   - Cán bộ nghiệm thu: **AI checklist** → nghiệm thu.
+7. `tqhuy` hoặc `nttha`: **Nhật ký Trợ lý AI** để xem tỉ lệ đề xuất được chấp nhận, sửa hoặc bác bỏ.
 
 ## 7. Deploy (Render + Vercel)
 
