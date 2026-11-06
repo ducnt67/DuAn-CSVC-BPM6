@@ -55,12 +55,13 @@ export default function DashboardPage() {
     ].filter((d) => d.value > 0);
   }, [requests]);
 
-  // Chart data: Priorities (3 levels: Xử lý sau, Xử lý sớm, Khẩn cấp)
+  // Chart data: Priorities (4 mức: Xử lý sau, Xử lý sớm, Khẩn cấp, Rất khẩn cấp)
   const priorityData = useMemo(() => {
     return [
       { name: 'Xử lý sau', count: requests.filter((r) => r.priority === PRIORITY.LOW).length },
       { name: 'Xử lý sớm', count: requests.filter((r) => r.priority === PRIORITY.MEDIUM).length },
-      { name: 'Khẩn cấp', count: requests.filter((r) => r.priority === PRIORITY.HIGH || r.priority === PRIORITY.URGENT).length },
+      { name: 'Khẩn cấp', count: requests.filter((r) => r.priority === PRIORITY.HIGH).length },
+      { name: 'Rất khẩn cấp', count: requests.filter((r) => r.priority === PRIORITY.URGENT).length },
     ];
   }, [requests]);
 
